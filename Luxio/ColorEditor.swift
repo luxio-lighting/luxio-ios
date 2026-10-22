@@ -107,12 +107,24 @@ struct ColorControls: View {
     @StateObject private var editor: ColorEditor
     let mode: LightMode
     @Binding var isSending: Bool
+    @State private var namingGradient = false
+    @State private var gradientName = ""
+    @State private var savingGradient = false
     init(client: LightClient, mode: LightMode, isSending: Binding<Bool>) { self.client = client; self.mode = mode; _isSending = isSending; _editor = StateObject(wrappedValue: ColorEditor(client: client)) }
     var body: some View {
         let selected = editor.points.firstIndex { $0.id == editor.selected } ?? 0
         let white = editor.points[selected].white
         let colors = editor.points.map { $0.white && editor.strip == "WS2814" ? Color.white : $0.preview }
         VStack(spacing: 22) {
+                if mode == .gradient {
+                    HStack {
+                        Spacer()
+                        Button { gradientName = ""; namingGradient = true } label: {
+                            Label("Save gradient", systemImage: "plus").font(.system(size: 14, weight: .semibold))
+                                .padding(.horizontal, 16).frame(height: 40).background(.white.opacity(0.12), in: Capsule())
+                        }.disabled(editor.loading || editor.loadFailed || editor.sending || savingGradient || client.state == nil)
+                    }.padding(.horizontal, 22)
+                }
                 ColorWheel(editor: editor).frame(maxWidth: 420).padding(.horizontal, 22).disabled(editor.loading || editor.loadFailed || client.state == nil)
                 HStack {
                     HStack(spacing: 6) {
@@ -182,6 +194,26 @@ struct ColorControls: View {
                 if editor.sending { ProgressView().tint(.white).accessibilityLabel("Applying colors") }
         }.padding(.bottom, 8).frame(maxWidth: 500).frame(maxWidth: .infinity)
             .foregroundStyle(.white)
+            .alert("Save gradient", isPresented: $namingGradient) {
+                TextField("Name", text: $gradientName)
+                Button("Cancel", role: .cancel) {}
+                Button("Save") {
+                    let points = editor.points
+                    let strip = editor.strip
+                    let name = gradientName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    savingGradient = true
+                    Task {
+                        defer { savingGradient = false }
+                        do {
+                            var script = Proto(); script.string(1, UUID().uuidString.lowercased()); script.string(2, name)
+                            script.string(3, try CustomGradient(points: points).source(strip: strip)); script.uint(4, 1)
+                            var payload = Proto(); payload.data(7, script.bytes)
+                            _ = try await client.request(7, payload: payload)
+                            client.libraryRevision += 1; client.error = nil
+                        } catch { client.error = error.localizedDescription }
+                    }
+                }.disabled(gradientName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || gradientName.utf8.count > 63)
+            } message: { Text("Keep a named copy on this device.") }
             .overlay { if editor.loading { ProgressView().tint(.white) } }
             .task(id: client.state?.activeScript) { if !editor.sending && !editor.dragging { await editor.load(mode: mode) } }
             .onChange(of: editor.sending) { _, value in isSending = value }

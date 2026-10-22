@@ -20,5 +20,24 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: lighting.luxio.app
-        MARKETING_VERSION: '0.1.5'
-        CURRENT_PROJECT_VERSION: '6'
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: '0.1.7'
+        CURRENT_PROJECT_VERSION: '8'
+  LuxioUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Luxio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: lighting.luxio.uitests
+        INFOPLIST_FILE: ''
+        TEST_TARGET_NAME: Luxio
+schemes:
+  Luxio:
+    build:
+      targets:
+        Luxio: all
+    test:
+      targets: [LuxioUITests]

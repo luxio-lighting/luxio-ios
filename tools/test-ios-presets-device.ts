@@ -28,13 +28,14 @@ try {
     await requestHttp(address, { id: id++, operation: 2, brightness: 16 });
     console.log(`PASS: ${preset.name} starts, survives Lua frames and brightness changes, and stops on 60-controller WS2805`);
   }
-  await requestHttp(address, { id: id++, operation: 2, brightness: 0 });
+  await requestHttp(address, { id: id++, operation: 15, on: false });
   await new Promise(resolve => setTimeout(resolve, 600));
-  assert.equal((await requestHttp(address, { id: id++, operation: 0 })).state!.brightness, 0);
+  assert.equal((await requestHttp(address, { id: id++, operation: 0 })).state!.on, false);
 } finally {
   if (scriptId) await requestHttp(address, { id: id++, operation: 9, scriptId });
   await requestHttp(address, { id: id++, operation: 1, color: initial.color });
   await requestHttp(address, { id: id++, operation: 2, brightness: initial.brightness });
   if (initial.activeScriptId) await requestHttp(address, { id: id++, operation: 10, scriptId: initial.activeScriptId });
+  await requestHttp(address, { id: id++, operation: 15, on: initial.on });
   console.log('Restored the original color, brightness, and animation.');
 }

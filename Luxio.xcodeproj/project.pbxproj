@@ -8,16 +8,31 @@
 
 /* Begin PBXBuildFile section */
 		1459CBA74F6A2CC5C33E6DF1 /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7185ABA55ABF001F566F64A6 /* Protocol.swift */; };
+		1ABF47BAA295DB5D7E4B0485 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */; };
 		282A48F0FB9B3FAC8002A5CD /* ColorEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD59EC634E5BEDF0BBE9E173 /* ColorEditor.swift */; };
+		2CB5B27B6685EF59D4B441AD /* SavedLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44EFDE9FE4CCB35799C69816 /* SavedLibraryTests.swift */; };
 		2D1023F1A0FBB575F01D0EF0 /* Gradient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D384970AE45BE4C62255BCC /* Gradient.swift */; };
 		5B660AD1EAA416495EC2AD44 /* LuxioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE14CC964F0ECC58ECE028CE /* LuxioApp.swift */; };
 		A6AA7DB9D8F06F2E4D165AB9 /* Presets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8AE88F9C29F6942AD9A999B /* Presets.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		FC6ACB0DAEE8E7DF7FC9173B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF8A4CA4AB99F1CAD40EB266 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4EF8443528DBC06C37CED9CF;
+			remoteInfo = Luxio;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3D384970AE45BE4C62255BCC /* Gradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gradient.swift; sourceTree = "<group>"; };
+		44EFDE9FE4CCB35799C69816 /* SavedLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedLibraryTests.swift; sourceTree = "<group>"; };
 		70C3FF76E6EE50132A56856C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7185ABA55ABF001F566F64A6 /* Protocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Protocol.swift; sourceTree = "<group>"; };
+		8465161F1923299B6EF019C0 /* LuxioUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LuxioUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3C7AFB1EC89FBB7C3B6DED8 /* Luxio.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Luxio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8AE88F9C29F6942AD9A999B /* Presets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Presets.swift; sourceTree = "<group>"; };
 		DD59EC634E5BEDF0BBE9E173 /* ColorEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorEditor.swift; sourceTree = "<group>"; };
@@ -29,14 +44,24 @@
 			isa = PBXGroup;
 			children = (
 				EA9785521510FFC30481315E /* Luxio */,
+				2C05FE2FBC6AC9024D51FA94 /* UITests */,
 				D3D05571BD1D8DA806ED197D /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		2C05FE2FBC6AC9024D51FA94 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				44EFDE9FE4CCB35799C69816 /* SavedLibraryTests.swift */,
+			);
+			path = UITests;
 			sourceTree = "<group>";
 		};
 		D3D05571BD1D8DA806ED197D /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				D3C7AFB1EC89FBB7C3B6DED8 /* Luxio.app */,
+				8465161F1923299B6EF019C0 /* LuxioUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -44,6 +69,7 @@
 		EA9785521510FFC30481315E /* Luxio */ = {
 			isa = PBXGroup;
 			children = (
+				2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */,
 				DD59EC634E5BEDF0BBE9E173 /* ColorEditor.swift */,
 				3D384970AE45BE4C62255BCC /* Gradient.swift */,
 				70C3FF76E6EE50132A56856C /* Info.plist */,
@@ -62,6 +88,7 @@
 			buildConfigurationList = 7C608614191468C6338B2683 /* Build configuration list for PBXNativeTarget "Luxio" */;
 			buildPhases = (
 				B128B83C18FF46AC6C37BDB5 /* Sources */,
+				409F240335B9B5E301688893 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -74,6 +101,24 @@
 			productReference = D3C7AFB1EC89FBB7C3B6DED8 /* Luxio.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F59BABACAA262371AD7EAE5E /* LuxioUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BC98168AC627AD8BAACB1FC4 /* Build configuration list for PBXNativeTarget "LuxioUITests" */;
+			buildPhases = (
+				765B4B9D795C757E92E2AED5 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				92AEFDA6E0B344BA841A51C0 /* PBXTargetDependency */,
+			);
+			name = LuxioUITests;
+			packageProductDependencies = (
+			);
+			productName = LuxioUITests;
+			productReference = 8465161F1923299B6EF019C0 /* LuxioUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -85,6 +130,10 @@
 				TargetAttributes = {
 					4EF8443528DBC06C37CED9CF = {
 						ProvisioningStyle = Automatic;
+					};
+					F59BABACAA262371AD7EAE5E = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = 4EF8443528DBC06C37CED9CF;
 					};
 				};
 			};
@@ -103,11 +152,31 @@
 			projectRoot = "";
 			targets = (
 				4EF8443528DBC06C37CED9CF /* Luxio */,
+				F59BABACAA262371AD7EAE5E /* LuxioUITests */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		409F240335B9B5E301688893 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1ABF47BAA295DB5D7E4B0485 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		765B4B9D795C757E92E2AED5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2CB5B27B6685EF59D4B441AD /* SavedLibraryTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B128B83C18FF46AC6C37BDB5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -121,6 +190,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		92AEFDA6E0B344BA841A51C0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4EF8443528DBC06C37CED9CF /* Luxio */;
+			targetProxy = FC6ACB0DAEE8E7DF7FC9173B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		5CF5121124E27F0480B4D2C6 /* Debug */ = {
@@ -197,36 +274,70 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				INFOPLIST_FILE = Luxio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.5;
+				MARKETING_VERSION = 0.1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.app;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
+		810AC8CDE4844C2BF971B675 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Luxio;
+			};
+			name = Debug;
+		};
 		B39EDCBDE4D3AA0AC44E4B05 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				INFOPLIST_FILE = Luxio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.5;
+				MARKETING_VERSION = 0.1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.app;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
+		};
+		BDD499775BCAF0CA25110ABA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Luxio;
+			};
+			name = Release;
 		};
 		CD6D7D889AFCDDE89E3CC172 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -307,6 +418,15 @@
 			buildConfigurations = (
 				B39EDCBDE4D3AA0AC44E4B05 /* Debug */,
 				798D616A61B8744B04588DBA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BC98168AC627AD8BAACB1FC4 /* Build configuration list for PBXNativeTarget "LuxioUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				810AC8CDE4844C2BF971B675 /* Debug */,
+				BDD499775BCAF0CA25110ABA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

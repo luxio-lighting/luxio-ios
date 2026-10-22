@@ -68,6 +68,7 @@ struct Light: Identifiable, Decodable {
     var id: String { deviceId }
 }
 struct LightState {
+    var on = false
     var build = 0
     var lanIP = ""
     var mode: Int?
@@ -78,7 +79,10 @@ struct LightState {
         build = fields.number(2); lanIP = fields.text(7)
         let config = try fields.message(3); name = config.text(1); strip = config.text(2)
         count = config.number(3); gpio = config.number(4); channel = config.number(5)
-        brightness = fields.number(4); activeScript = fields.text(6)
+        on = build >= 11 ? fields.number(9) != 0 : fields.number(4) > 0
+        brightness = min(256, max(1, fields.number(4)))
+        if build < 11 { brightness = fields.number(4) > 0 ? Int((Double(fields.number(4)) * 256 / 255).rounded()) : 16 }
+        activeScript = fields.text(6)
         mode = fields.number(2) >= 5 || fields[8] != nil ? fields.number(8) : nil
         let color = try fields.message(5); channels = (1...6).map { color.number($0) }
     }
@@ -87,6 +91,7 @@ struct LightState {
     @Published var state: LightState?
     @Published var error: String?
     @Published var lastBrightness = 16
+    @Published var libraryRevision = 0
     let address: String
     private var nextId: UInt64 = 1
     private var lastAppliedId: UInt64 = 0
@@ -100,13 +105,22 @@ struct LightState {
         request.setValue("application/x-protobuf", forHTTPHeaderField: "Content-Type"); request.httpBody = message.bytes
         let (data, response) = try await URLSession.shared.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 32768 else { throw LuxioError.message("Device returned an invalid response") }
-        let fields = try Proto.decode(data)
+        var fields = try Proto.decode(data)
         guard fields.number(1) == id else { throw LuxioError.message("Mismatched response") }
         if !fields.text(2).isEmpty { throw LuxioError.message(fields.text(2)) }
         if fields[3] != nil && id >= lastAppliedId {
             let updated = try LightState(fields.message(3))
             state = updated; lastAppliedId = id
-            if updated.brightness > 0 { lastBrightness = updated.brightness }
+            lastBrightness = updated.brightness
+        }
+        if operation == 5 && fields.number(11) > 0 {
+            let offset = try Proto.decode(payload.bytes).number(9)
+            let next = fields.number(11)
+            guard next > offset, !(fields[4] ?? []).isEmpty else { throw LuxioError.message("Invalid script listing continuation") }
+            var continuation = Proto(); continuation.uint(9, UInt64(next))
+            let page = try await self.request(5, payload: continuation)
+            fields[4, default: []].append(contentsOf: page[4] ?? [])
+            fields.removeValue(forKey: 11)
         }
         return fields
     }
@@ -116,8 +130,16 @@ struct LightState {
         var payload = Proto(); payload.data(3, color.bytes)
         do { _ = try await request(1, payload: payload); error = nil } catch { self.error = error.localizedDescription }
     }
+    func power(_ on: Bool) async {
+        var payload = Proto()
+        let modern = (state?.build ?? 11) >= 11
+        if modern { payload.uint(10, on ? 1 : 0) }
+        else { payload.uint(4, on ? UInt64(max(1, Int((Double(lastBrightness) * 255 / 256).rounded()))) : 0) }
+        do { _ = try await request(modern ? 15 : 2, payload: payload); error = nil } catch { self.error = error.localizedDescription }
+    }
     func brightness(_ level: Int) async {
-        var payload = Proto(); payload.uint(4, UInt64(level))
+        guard (1...256).contains(level) else { error = "Brightness must be 1–256"; return }
+        var payload = Proto(); payload.uint(4, UInt64((state?.build ?? 11) >= 11 ? level : max(1, Int((Double(level) * 255 / 256).rounded()))))
         do { _ = try await request(2, payload: payload); error = nil } catch { self.error = error.localizedDescription }
     }
 }

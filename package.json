@@ -12,7 +12,7 @@
     "zod": "^4.1.0"
   },
   "scripts": {
-    "test": "node --import tsx tools/test-swift-codec.ts && node --import tsx tools/test-custom-gradients.ts && node --import tsx tools/test-ios-presets.ts",
+    "test": "node --import tsx tools/test-swift-codec.ts && node --import tsx tools/test-custom-gradients.ts && node --import tsx tools/test-ios-presets.ts && swiftc -module-cache-path .sdk/swift-module-cache Luxio/Protocol.swift tools/test-script-pages.swift -o .sdk/test-script-pages && .sdk/test-script-pages",
     "check": "tsc --noEmit",
     "postinstall": "node tools/materialize-dependencies.mjs"
   }

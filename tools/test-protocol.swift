@@ -9,8 +9,16 @@ import Foundation
         let decoded = try Proto.decode(Data(base64Encoded: CommandLine.arguments[1])!)
         let state = try LightState(decoded.message(3))
         precondition(decoded.number(1) == 123)
-        precondition(state.name == "Desk 💡" && state.count == 60 && state.brightness == 0)
+        precondition(state.name == "Desk 💡" && state.count == 60 && state.brightness == 256 && !state.on)
         precondition(state.mode == 1)
+        var power = Proto(); power.uint(2, 15); power.uint(10, 1)
+        let decodedPower = try Proto.decode(power.bytes)
+        precondition(decodedPower.number(10) == 1)
+        var extra = Proto(); extra.uint(9, 1)
+        // Proto fields may occur more than once; use a fresh state for the on case.
+        var onFields = try decoded.message(3); onFields[9] = try Proto.decode(extra.bytes)[9]
+        let poweredState = try LightState(onFields)
+        precondition(poweredState.on)
         precondition(state.channels == [255, 0, 0, 0, 17, 129])
         do { _ = try Proto.decode(Data([0x1a, 0xff])); fatalError("Malformed length accepted") }
         catch { /* Expected: truncated varint must be rejected. */ }

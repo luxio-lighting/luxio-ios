@@ -26,5 +26,6 @@ try {
   await requestHttp(address, { id: id++, operation: 1, color: initial.color });
   await requestHttp(address, { id: id++, operation: 2, brightness: initial.brightness });
   if (initial.activeScriptId) await requestHttp(address, { id: id++, operation: 10, scriptId: initial.activeScriptId });
+  await requestHttp(address, { id: id++, operation: 15, on: initial.on });
   console.log('Original strip state restored.');
 }

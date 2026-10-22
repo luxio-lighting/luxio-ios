@@ -22,3 +22,7 @@ npm test
 ```
 
 Swift test caches and generated fixtures live in the ignored `.sdk/` directory. No shared SDK or neighboring Luxio repository is required.
+
+The gradient editor can save named copies to the device. My Gradients and My Animations show saved custom items, with search, play/stop and long-press deletion. Pull to refresh after uploads from another client. Large libraries are fetched in pages.
+
+For the saved-library UI test, start `node --import tsx tools/test-library-server.ts`, then run the `Luxio` scheme tests on an iOS simulator. The fixture binds only localhost:8082 and the debug-only launch environment points the test at it; physical lights are not involved.

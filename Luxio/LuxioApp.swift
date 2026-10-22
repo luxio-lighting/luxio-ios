@@ -34,6 +34,12 @@ extension LightState {
     private var services: [NetService] = []
     override init() { super.init(); browser.delegate = self }
     func refresh() async {
+#if DEBUG
+        if let address = ProcessInfo.processInfo.environment["LUXIO_UI_TEST_ADDRESS"] {
+            lights = [Light(deviceId: "ui-fixture", name: "Library test", lan_ip: address)]
+            return
+        }
+#endif
         searching = true; error = nil
         browser.stop(); services.removeAll()
         browser.searchForServices(ofType: "_luxio._tcp.", inDomain: "local.")
@@ -112,7 +118,7 @@ struct BrightnessSlider: View {
     var body: some View {
         GeometryReader { geometry in
             let width = max(geometry.size.width - 20, 1)
-            let progress = min(max(value / 255, 0), 1)
+            let progress = min(max((value - 1) / 255, 0), 1)
             ZStack(alignment: .leading) {
                 Capsule().fill(.black.opacity(0.16)).frame(height: 8)
                 Capsule().fill(ink.opacity(0.26)).frame(width: 10 + width * progress, height: 8)
@@ -125,7 +131,7 @@ struct BrightnessSlider: View {
                     .onChanged { gesture in
                         guard enabled else { return }
                         if !dragging { dragging = true; onEditingChanged(true) }
-                        value = (min(max((gesture.location.x - 10) / width, 0), 1) * 255).rounded()
+                        value = (min(max((gesture.location.x - 10) / width, 0), 1) * 255 + 1).rounded()
                     }
                     .onEnded { _ in
                         guard dragging else { return }
@@ -135,13 +141,13 @@ struct BrightnessSlider: View {
             .animation(.easeOut(duration: 0.12), value: dragging)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Brightness")
-            .accessibilityValue("\(Int(value / 255 * 100)) percent")
+            .accessibilityValue("\(Int(value / 256 * 100)) percent")
             .accessibilityAdjustableAction { direction in
                 guard enabled else { return }
                 onEditingChanged(true)
                 switch direction {
-                case .increment: value = min(255, value + 13)
-                case .decrement: value = max(0, value - 13)
+                case .increment: value = min(256, value + 13)
+                case .decrement: value = max(1, value - 13)
                 @unknown default: break
                 }
                 onEditingChanged(false)
@@ -156,7 +162,7 @@ struct LightCard: View {
     @State private var editing = false
     init(light: Light) { self.light = light; _client = StateObject(wrappedValue: LightClient(address: light.lan_ip)) }
     var body: some View {
-        let on = (client.state?.brightness ?? 0) > 0
+        let on = client.state?.on ?? false
         let color = client.state?.displayColor ?? tileColor
         let ink: Color = on && client.state?.usesDarkForeground == true ? .black.opacity(0.85) : .white
         VStack(spacing: 4) {
@@ -168,14 +174,14 @@ struct LightCard: View {
                         Spacer(minLength: 0)
                     }.frame(minHeight: 48).contentShape(Rectangle())
                 }.buttonStyle(.plain)
-                Toggle("Power", isOn: Binding(get: { on }, set: { value in Task { await client.brightness(value ? client.lastBrightness : 0) } }))
+                Toggle("Power", isOn: Binding(get: { on }, set: { value in Task { await client.power(value) } }))
                     .labelsHidden().tint(.black.opacity(0.25)).disabled(client.state == nil).accessibilityLabel("\(client.state?.name ?? light.name) power")
             }.padding(.horizontal, 18).padding(.top, 13)
             BrightnessSlider(value: $level, ink: ink) { active in
                 editing = active
                 if !active { Task { await client.brightness(Int(level)) } }
             }.padding(.horizontal, 14).padding(.bottom, 8).disabled(client.state == nil)
-                .accessibilityLabel("\(client.state?.name ?? light.name) brightness").accessibilityValue("\(Int(level / 255 * 100)) percent")
+                .accessibilityLabel("\(client.state?.name ?? light.name) brightness").accessibilityValue("\(Int(level / 256 * 100)) percent")
             if client.error != nil { Text("Not reachable · tap to retry").font(.caption2).padding(.bottom, 10).foregroundStyle(ink.opacity(0.7)) }
         }
         .foregroundStyle(ink)
@@ -186,7 +192,7 @@ struct LightCard: View {
         .shadow(color: .black.opacity(0.2), radius: 8, y: 5)
         .animation(.easeInOut(duration: 0.25), value: client.state?.channels)
         .animation(.easeInOut(duration: 0.2), value: on)
-        .onChange(of: client.state?.brightness) { _, value in if !editing { level = Double(value ?? 0) } }
+        .onChange(of: client.state?.brightness) { _, value in if !editing { level = Double(value ?? 16) } }
         .task {
             while !Task.isCancelled {
                 await client.refresh()
@@ -207,7 +213,7 @@ struct ControlView: View {
     @State private var modeResolved = false
     @State private var editingColor = false
     var body: some View {
-        let on = (client.state?.brightness ?? 0) > 0
+        let on = client.state?.on ?? false
         let ink: Color = on && client.state?.usesDarkForeground == true ? .black.opacity(0.85) : .white
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
@@ -217,7 +223,7 @@ struct ControlView: View {
                 SceneLibrary(client: client, mode: mode).disabled(editingColor)
                 if let error = client.error { Text(error).font(.footnote).foregroundStyle(.red.opacity(0.9)).padding(.horizontal, 16) }
             }.padding(.top, 28).padding(.bottom, 28)
-        }
+        }.refreshable { client.libraryRevision += 1; await client.refresh() }
         .background(backdrop.ignoresSafeArea())
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 10) {
@@ -226,10 +232,10 @@ struct ControlView: View {
                     Text(client.state?.name ?? light.name).font(.system(size: 18, weight: .semibold)).lineLimit(2)
                     Spacer(minLength: 0)
                     Button { settings = true } label: { Image(systemName: "ellipsis").font(.system(size: 21, weight: .semibold)).frame(width: 40, height: 40).background(ink.opacity(0.14), in: Circle()) }.accessibilityLabel("Light settings")
-                    Toggle("Power", isOn: Binding(get: { on }, set: { value in Task { await client.brightness(value ? client.lastBrightness : 0) } })).labelsHidden().tint(.black.opacity(0.28)).disabled(client.state == nil)
+                    Toggle("Power", isOn: Binding(get: { on }, set: { value in Task { await client.power(value) } })).labelsHidden().tint(.black.opacity(0.28)).disabled(client.state == nil)
                 }.padding(.horizontal, 16).padding(.top, 10)
                 BrightnessSlider(value: $level, ink: ink) { active in editing = active; if !active { Task { await client.brightness(Int(level)) } } }
-                    .disabled(client.state == nil).padding(.horizontal, 20).padding(.bottom, 12).accessibilityLabel("Brightness").accessibilityValue("\(Int(level / 255 * 100)) percent")
+                    .disabled(client.state == nil).padding(.horizontal, 20).padding(.bottom, 12).accessibilityLabel("Brightness").accessibilityValue("\(Int(level / 256 * 100)) percent")
                 HStack(spacing: 4) {
                     ForEach(LightMode.allCases) { item in
                         Button { modeResolved = true; mode = item } label: {
@@ -246,10 +252,10 @@ struct ControlView: View {
                 .shadow(color: .black.opacity(0.2), radius: 12, y: 8)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .onChange(of: client.state?.brightness) { _, value in if !editing { level = Double(value ?? 0) } }
+        .onChange(of: client.state?.brightness) { _, value in if !editing { level = Double(value ?? 16) } }
         .task {
             while !Task.isCancelled {
-                await client.refresh(); if !editing { level = Double(client.state?.brightness ?? 0) }
+                await client.refresh(); if !editing { level = Double(client.state?.brightness ?? 16) }
                 if !modeResolved, let state = client.state {
                     do {
                         var detected: LightMode = .color
@@ -291,12 +297,20 @@ private let scenes: [LightScene] = [
     .init(name: "Moonlight", symbol: "moon.fill", colors: [.cyan, .indigo], rgb: [125, 175, 255, 0, 0, 0])
 ]
 
+struct SavedLightScript: Identifiable {
+    let id: String
+    let name: String
+    let mode: Int
+}
+
 struct SceneLibrary: View {
     @ObservedObject var client: LightClient
     let mode: LightMode
-    @State private var activeIsGradient = false
     @State private var busy: String?
     @State private var scriptIDs: [String: String] = [:]
+    @State private var savedScripts: [SavedLightScript] = []
+    @State private var search = ""
+    @State private var deleting: SavedLightScript?
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
             if mode == .color {
@@ -349,27 +363,68 @@ struct SceneLibrary: View {
                     }
                 }
             }
-            if mode == .animation, !activeIsGradient, let active = client.state?.activeScript, !active.isEmpty, !scriptIDs.values.contains(active) {
-                Button { Task {
-                    do { _ = try await client.request(11); client.error = nil } catch { client.error = error.localizedDescription }
-                } } label: {
-                    Label("Custom animation", systemImage: "stop.circle.fill").font(.headline).padding(18).frame(maxWidth: .infinity, alignment: .leading).background(tileColor, in: RoundedRectangle(cornerRadius: 13))
-                }.buttonStyle(.plain).padding(.horizontal, 14).accessibilityLabel("Stop custom animation").disabled(busy != nil)
+            if mode != .color {
+                let items = savedScripts.filter { $0.mode == (mode == .gradient ? 1 : 2) }
+                if !items.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text(mode == .gradient ? "MY GRADIENTS" : "MY ANIMATIONS").tracking(1.8)
+                            Spacer(); Text("\(items.count)")
+                        }.font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.65))
+                        if items.count > 8 {
+                            TextField("Search saved items", text: $search).padding(12).background(tileColor, in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                            ForEach(items.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }) { item in
+                                let playing = client.state?.activeScript == item.id
+                                Button { Task {
+                                    busy = item.id; defer { busy = nil }
+                                    do {
+                                        var payload = Proto(); payload.string(8, item.id)
+                                        _ = try await client.request(playing ? 11 : 10, payload: payload); client.error = nil
+                                    } catch { client.error = error.localizedDescription }
+                                } } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: playing ? "stop.fill" : (item.mode == 1 ? "circle.lefthalf.filled" : "play.fill"))
+                                            .font(.system(size: 22)).frame(width: 28)
+                                        Text(item.name).font(.system(size: 14, weight: .medium)).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+                                    }.padding(14).frame(height: 82).frame(maxWidth: .infinity)
+                                        .background(tileColor, in: RoundedRectangle(cornerRadius: 13))
+                                        .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(playing ? Color.white.opacity(0.8) : .clear, lineWidth: 1.5) }
+                                }.buttonStyle(.plain).accessibilityLabel("\(playing ? "Stop" : "Play") \(item.name)")
+                                    .contextMenu {
+                                        Button("Delete", systemImage: "trash", role: .destructive) { deleting = item }
+                                    }
+                            }
+                        }
+                    }.padding(.horizontal, 16)
+                }
             }
         }.foregroundStyle(.white).disabled(client.state == nil || busy != nil)
-            .task(id: client.state?.activeScript) {
-                do {
-                    activeIsGradient = false
-                    if let reported = client.state?.mode { activeIsGradient = reported == 1 }
-                    else if let active = client.state?.activeScript, !active.isEmpty {
-                        var payload = Proto(); payload.string(8, active)
-                        let response = try await client.request(6, payload: payload)
-                        let script = try response.message(5)
-                        activeIsGradient = CustomGradient(source: script.text(3)) != nil || LightPreset.all.contains(where: { $0.isGradient && script.text(2) == "Luxio · \($0.name)" })
+            .alert("Delete saved item?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
+                Button("Cancel", role: .cancel) { deleting = nil }
+                Button("Delete", role: .destructive) {
+                    guard let item = deleting else { return }; deleting = nil
+                    Task {
+                        busy = item.id; defer { busy = nil }
+                        do {
+                            var payload = Proto(); payload.string(8, item.id)
+                            _ = try await client.request(9, payload: payload)
+                            savedScripts.removeAll { $0.id == item.id }; client.libraryRevision += 1; client.error = nil
+                        } catch { client.error = error.localizedDescription }
                     }
+                }
+            } message: { Text("This removes it from the device.") }
+            .onChange(of: mode) { _, _ in search = "" }
+            .task(id: "\(client.state?.activeScript ?? "")-\(client.libraryRevision)") {
+                do {
                     let list = try await client.request(5)
+                    scriptIDs = [:]; savedScripts = []
                     for data in list[4] ?? [] {
                         let script = try Proto.decode(data)
+                        if script.text(2) != "Luxio · Custom gradient" && !LightPreset.all.contains(where: { script.text(2) == "Luxio · \($0.name)" }) {
+                            savedScripts.append(SavedLightScript(id: script.text(1), name: script.text(2), mode: script.number(4) == 1 ? 1 : 2))
+                        }
                         for preset in LightPreset.all where script.text(2) == "Luxio · \(preset.name)" { scriptIDs[preset.name] = script.text(1) }
                     }
                 } catch { if !Task.isCancelled { client.error = error.localizedDescription } }

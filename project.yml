@@ -1,0 +1,24 @@
+name: Luxio
+options:
+  bundleIdPrefix: lighting.luxio
+  deploymentTarget:
+    iOS: '17.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_FILE: Luxio/Info.plist
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Luxio:
+    type: application
+    platform: iOS
+    sources: [Luxio]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: lighting.luxio.app
+        MARKETING_VERSION: '0.1.5'
+        CURRENT_PROJECT_VERSION: '6'

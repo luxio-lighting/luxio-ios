@@ -1,0 +1,19 @@
+{
+  "name": "@luxio-lighting/ios-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "tsx": "^4.20.0",
+    "@types/node": "^24.0.0",
+    "fengari": "^0.1.4",
+    "protobufjs": "^7.5.4",
+    "zod": "^4.1.0"
+  },
+  "scripts": {
+    "test": "node --import tsx tools/test-swift-codec.ts && node --import tsx tools/test-custom-gradients.ts && node --import tsx tools/test-ios-presets.ts",
+    "check": "tsc --noEmit",
+    "postinstall": "node tools/materialize-dependencies.mjs"
+  }
+}

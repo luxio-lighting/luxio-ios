@@ -9,7 +9,6 @@ import SwiftUI
     @Published var dragging = false
     @Published var error: String?
     private var queued: [GradientPoint]?
-    private var scriptID: String?
     let client: LightClient
     var strip: String { client.state?.strip ?? "WS2805" }
     init(client: LightClient) {
@@ -20,39 +19,15 @@ import SwiftUI
     func load(mode: LightMode) async {
         loading = true; loadFailed = false; error = nil
         defer { loading = false }
-        do {
-            if let active = client.state?.activeScript, !active.isEmpty {
-                var payload = Proto(); payload.string(8, active)
-                let response = try await client.request(6, payload: payload)
-                let script = try response.message(5)
-                if let gradient = CustomGradient(source: script.text(3)) {
-                    points = gradient.points
-                    if script.text(2) == "Luxio · Custom gradient" { scriptID = active }
-                } else if let preset = LightPreset.all.first(where: { $0.isGradient && script.text(2) == "Luxio · \($0.name)" }) {
-                    points = preset.colors.map { GradientPoint(channels: $0 + [0, 0, 0]) }
-                }
-            }
-            if mode == .color {
-                points = [points[0]]
-            } else if points.count == 1 {
-                let list = try await client.request(5)
-                for data in list[4] ?? [] {
-                    let script = try Proto.decode(data)
-                    if script.text(2) == "Luxio · Custom gradient" {
-                        var payload = Proto(); payload.string(8, script.text(1))
-                        let saved = try await client.request(6, payload: payload)
-                        if let gradient = CustomGradient(source: try saved.message(5).text(3)) {
-                            points = gradient.points; scriptID = script.text(1)
-                        }
-                        break
-                    }
-                }
-                if points.count == 1 {
-                    points.append(GradientPoint(hue: (points[0].hue + 1.0 / 6).truncatingRemainder(dividingBy: 1), saturation: 0.9, white: points[0].white, temperature: points[0].temperature < 0.5 ? 1 : 0))
-                }
-            }
-            selected = points[0].id
-        } catch { self.error = error.localizedDescription; loadFailed = true }
+        if mode == .gradient, let fields = client.state?.gradient, let gradient = CustomGradient(fields: fields, strip: strip) {
+            points = gradient.points
+        } else if mode == .color {
+            points = [GradientPoint(channels: client.state?.channels ?? [255, 0, 0, 0, 0, 0])]
+        }
+        if mode == .gradient && points.count == 1 {
+            points.append(GradientPoint(hue: (points[0].hue + 1.0 / 6).truncatingRemainder(dividingBy: 1), saturation: 0.9, white: points[0].white, temperature: points[0].temperature < 0.5 ? 1 : 0))
+        }
+        if !points.contains(where: { $0.id == selected }) { selected = points[0].id }
     }
     // Coalesce edits while a request is in flight. Never cancel an upload halfway
     // through; send the newest complete gradient next, so older edits cannot win.
@@ -72,25 +47,11 @@ import SwiftUI
                         var payload = Proto(); payload.data(3, color.bytes)
                         _ = try await client.request(1, payload: payload)
                     } else {
-                        if scriptID == nil {
-                            let list = try await client.request(5)
-                            for data in list[4] ?? [] {
-                                let script = try Proto.decode(data)
-                                if script.text(2) == "Luxio · Custom gradient" { scriptID = script.text(1) }
-                            }
-                        }
-                        var script = Proto()
-                        script.string(1, scriptID ?? UUID().uuidString.lowercased())
-                        script.string(2, "Luxio · Custom gradient")
-                        script.string(3, try CustomGradient(points: snapshot).source(strip: strip)); script.uint(4, 1)
-                        var payload = Proto(); payload.data(7, script.bytes)
-                        let saved = try await client.request(scriptID == nil ? 7 : 8, payload: payload)
-                        scriptID = try saved.message(5).text(1)
-                        var run = Proto(); run.string(8, scriptID!)
-                        _ = try await client.request(10, payload: run)
+                        var payload = Proto(); payload.data(11, try CustomGradient(points: snapshot).proto(strip: strip).bytes)
+                        _ = try await client.request(17, payload: payload)
                     }
                     error = nil; client.error = nil
-                } catch { self.error = error.localizedDescription; scriptID = nil }
+                } catch { self.error = error.localizedDescription }
             }
         }
     }
@@ -104,61 +65,42 @@ extension GradientPoint {
 
 struct ColorControls: View {
     @ObservedObject var client: LightClient
-    @StateObject private var editor: ColorEditor
+    @ObservedObject var editor: ColorEditor
     let mode: LightMode
     @Binding var isSending: Bool
-    @State private var namingGradient = false
-    @State private var gradientName = ""
-    @State private var savingGradient = false
-    init(client: LightClient, mode: LightMode, isSending: Binding<Bool>) { self.client = client; self.mode = mode; _isSending = isSending; _editor = StateObject(wrappedValue: ColorEditor(client: client)) }
     var body: some View {
         let selected = editor.points.firstIndex { $0.id == editor.selected } ?? 0
         let white = editor.points[selected].white
         let colors = editor.points.map { $0.white && editor.strip == "WS2814" ? Color.white : $0.preview }
         VStack(spacing: 22) {
-                if mode == .gradient {
-                    HStack {
-                        Spacer()
-                        Button { gradientName = ""; namingGradient = true } label: {
-                            Label("Save gradient", systemImage: "plus").font(.system(size: 14, weight: .semibold))
-                                .padding(.horizontal, 16).frame(height: 40).background(.white.opacity(0.12), in: Capsule())
-                        }.disabled(editor.loading || editor.loadFailed || editor.sending || savingGradient || client.state == nil)
-                    }.padding(.horizontal, 22)
-                }
                 ColorWheel(editor: editor).frame(maxWidth: 420).padding(.horizontal, 22).disabled(editor.loading || editor.loadFailed || client.state == nil)
                 HStack {
                     HStack(spacing: 6) {
                         Button {
-                            editor.points[selected].white = false; editor.apply()
+                            editor.points[selected].originalChannels = nil; editor.points[selected].white = false; editor.apply()
                         } label: {
                             Circle().fill(AngularGradient(colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red], center: .center)).frame(width: 28, height: 28)
                                 .padding(6).overlay { Circle().strokeBorder(white ? .clear : .white, lineWidth: 2) }
                         }.accessibilityLabel("Color wheel").accessibilityAddTraits(!white ? .isSelected : [])
-                        if editor.strip != "WS2812" {
+                        if editor.strip == "WS2805" || editor.strip == "WS2814" {
                             Button {
-                                editor.points[selected].white = true; editor.apply()
+                                editor.points[selected].originalChannels = nil; editor.points[selected].white = true; editor.apply()
                             } label: {
-                                Circle().fill(LinearGradient(colors: [Color(red: 1, green: 0.73, blue: 0.3), .white, .cyan.opacity(0.6)], startPoint: .top, endPoint: .bottom)).frame(width: 28, height: 28)
+                                Circle().fill(LinearGradient(colors: editor.strip == "WS2814" ? [.white, .white] : [Color(red: 1, green: 0.73, blue: 0.3), .white, .cyan.opacity(0.6)], startPoint: .top, endPoint: .bottom)).frame(width: 28, height: 28)
                                     .padding(6).overlay { Circle().strokeBorder(white ? .white : .clear, lineWidth: 2) }
                             }.accessibilityLabel(editor.strip == "WS2805" ? "White temperature wheel" : "White channel").accessibilityAddTraits(white ? .isSelected : [])
                         }
                     }.padding(5).background(.white.opacity(0.1), in: Capsule())
                     Spacer()
-                    if mode == .gradient {
-                    Button {
-                        let point = GradientPoint(hue: (editor.points[selected].hue + 1.0 / 6).truncatingRemainder(dividingBy: 1), saturation: 0.9, white: white, temperature: (editor.points[selected].temperature + 0.3).truncatingRemainder(dividingBy: 1))
-                        editor.points.append(point); editor.selected = point.id; editor.apply()
-                    } label: { Label("Add point", systemImage: "plus").font(.system(size: 14, weight: .semibold)).padding(.horizontal, 15).frame(height: 46).background(.white.opacity(0.12), in: Capsule()) }
-                    .disabled(editor.points.count >= 8).accessibilityHint("Adds a color at the end of the strip gradient. Up to eight points.")
-                    }
+
                 }.padding(.horizontal, 22).disabled(editor.loading || editor.loadFailed || client.state == nil)
                 if mode == .gradient {
                 VStack(spacing: 12) {
                     LinearGradient(colors: colors.count == 1 ? colors + colors : colors, startPoint: .leading, endPoint: .trailing)
-                        .frame(height: 14).clipShape(Capsule()).accessibilityLabel("Strip gradient preview, \(editor.points.count) colors")
+                        .frame(height: 14).clipShape(Capsule()).padding(.horizontal, 24).accessibilityLabel("Strip gradient preview, \(editor.points.count) colors")
                     HStack {
                         Text("START"); Spacer(); Text("END")
-                    }.font(.system(size: 9, weight: .semibold)).tracking(1.4).foregroundStyle(.white.opacity(0.4))
+                    }.font(.system(size: 9, weight: .semibold)).tracking(1.4).foregroundStyle(.white.opacity(0.4)).padding(.horizontal, 24)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(Array(editor.points.enumerated()), id: \.element.id) { index, point in
@@ -168,22 +110,26 @@ struct ColorControls: View {
                                         .padding(4).overlay { Circle().strokeBorder(point.id == editor.selected ? .white : .clear, lineWidth: 2) }
                                 }.accessibilityLabel("Select point \(index + 1)").accessibilityAddTraits(point.id == editor.selected ? .isSelected : [])
                             }
-                        }.padding(2)
+                            Button {
+                                let point = GradientPoint(hue: (editor.points[selected].hue + 1.0 / 6).truncatingRemainder(dividingBy: 1), saturation: 0.9, white: white, temperature: (editor.points[selected].temperature + 0.3).truncatingRemainder(dividingBy: 1))
+                                editor.points.append(point); editor.selected = point.id; editor.apply()
+                            } label: {
+                                Image(systemName: "plus").font(.system(size: 19, weight: .medium))
+                                    .frame(width: 44, height: 44).background(.white.opacity(0.12), in: Circle())
+                            }.disabled(editor.points.count >= 8).accessibilityLabel("Add point")
+                                .accessibilityHint("Adds a color at the end of the strip gradient. Up to eight points.")
+                            Button {
+                                editor.points.remove(at: selected)
+                                editor.selected = editor.points[min(selected, editor.points.count - 1)].id
+                                editor.apply()
+                            } label: {
+                                Image(systemName: "minus").font(.system(size: 19, weight: .medium))
+                                    .frame(width: 44, height: 44).background(.white.opacity(0.12), in: Circle())
+                            }.disabled(editor.points.count <= 2).accessibilityLabel("Remove point \(selected + 1)")
+                        }.padding(.horizontal, 24).padding(.vertical, 2)
                     }
-                    HStack {
-                        Text(white && editor.strip == "WS2814" ? "White channel selected" : "Drag point \(selected + 1) to choose its color").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
-                        Spacer()
-                        Button {
-                            editor.points.remove(at: selected)
-                            editor.selected = editor.points[min(selected, editor.points.count - 1)].id
-                            editor.apply()
-                        } label: { Image(systemName: "minus.circle").font(.system(size: 22)).frame(width: 44, height: 44) }
-                            .disabled(editor.points.count <= 2).accessibilityLabel("Remove point \(selected + 1)")
-                    }
-                }.padding(.horizontal, 24).disabled(editor.loading || editor.loadFailed || client.state == nil)
-                } else {
-                    Text(white && editor.strip == "WS2814" ? "White channel selected" : "Drag to choose a color for the entire strip")
-                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).padding(.horizontal, 24)
+
+                }.disabled(editor.loading || editor.loadFailed || client.state == nil)
                 }
                 if let error = editor.error {
                     VStack(spacing: 8) {
@@ -191,33 +137,14 @@ struct ColorControls: View {
                         Button("Retry") { if editor.loadFailed { Task { await editor.load(mode: mode) } } else { editor.apply() } }.disabled(editor.sending)
                     }.padding(.horizontal, 24)
                 }
-                if editor.sending { ProgressView().tint(.white).accessibilityLabel("Applying colors") }
         }.padding(.bottom, 8).frame(maxWidth: 500).frame(maxWidth: .infinity)
             .foregroundStyle(.white)
-            .alert("Save gradient", isPresented: $namingGradient) {
-                TextField("Name", text: $gradientName)
-                Button("Cancel", role: .cancel) {}
-                Button("Save") {
-                    let points = editor.points
-                    let strip = editor.strip
-                    let name = gradientName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    savingGradient = true
-                    Task {
-                        defer { savingGradient = false }
-                        do {
-                            var script = Proto(); script.string(1, UUID().uuidString.lowercased()); script.string(2, name)
-                            script.string(3, try CustomGradient(points: points).source(strip: strip)); script.uint(4, 1)
-                            var payload = Proto(); payload.data(7, script.bytes)
-                            _ = try await client.request(7, payload: payload)
-                            client.libraryRevision += 1; client.error = nil
-                        } catch { client.error = error.localizedDescription }
-                    }
-                }.disabled(gradientName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || gradientName.utf8.count > 63)
-            } message: { Text("Keep a named copy on this device.") }
-            .overlay { if editor.loading { ProgressView().tint(.white) } }
-            .task(id: client.state?.activeScript) { if !editor.sending && !editor.dragging { await editor.load(mode: mode) } }
+            .task(id: "\(client.state?.activeGradient ?? "")-\(client.state?.activeColor ?? "")") { if !editor.sending && !editor.dragging { await editor.load(mode: mode) } }
             .onChange(of: editor.sending) { _, value in isSending = value }
             .onDisappear { isSending = false }
+            .onChange(of: client.state?.gradient) { _, _ in
+                if mode == .gradient, !editor.sending, !editor.dragging, !editor.loading { Task { await editor.load(mode: mode) } }
+            }
             .onChange(of: client.state?.channels) { _, channels in
                 if mode == .color, !editor.sending, !editor.dragging, !editor.loading, let channels {
                     let point = GradientPoint(channels: channels)
@@ -245,12 +172,13 @@ private struct ColorWheel: View {
             }.shadow(color: .black.opacity(0.35), radius: 16, y: 8)
                 .contentShape(Circle())
                 .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("wheel"))
-                    .onChanged { value in editor.dragging = true; editor.points[selected].move(x: (value.location.x - radius) / radius, y: (value.location.y - radius) / radius) }
+                    .onChanged { value in guard !white || editor.strip == "WS2805" else { return }; editor.dragging = true; editor.points[selected].move(x: (value.location.x - radius) / radius, y: (value.location.y - radius) / radius) }
                     .onEnded { _ in editor.dragging = false; editor.apply() })
             ForEach(Array(editor.points.enumerated()), id: \.element.id) { index, point in
                 if point.white == white {
-                    let x = white ? 0 : cos(point.hue * 2 * .pi - 2 * .pi / 3) * point.saturation
-                    let y = white ? (point.temperature * 2 - 1) : sin(point.hue * 2 * .pi - 2 * .pi / 3) * point.saturation
+                    let y = white ? (editor.strip == "WS2805" ? point.temperature * 2 - 1 : 0) : sin(point.hue * 2 * .pi - 2 * .pi / 3) * point.saturation
+                    let limit = sqrt(max(0, 1 - y * y))
+                    let x = white ? min(max(point.whiteX ?? 0, -limit), limit) : cos(point.hue * 2 * .pi - 2 * .pi / 3) * point.saturation
                     Circle().fill(point.white && editor.strip == "WS2814" ? Color.white : point.preview).frame(width: point.id == editor.selected ? 34 : 28, height: point.id == editor.selected ? 34 : 28)
                         .overlay { Circle().strokeBorder(.white, lineWidth: 3) }
                         .overlay { Text("\(index + 1)").font(.system(size: 12, weight: .bold)).foregroundStyle(.black.opacity(0.7)) }
@@ -259,13 +187,15 @@ private struct ColorWheel: View {
                         .position(x: radius + x * radius, y: radius + y * radius)
                         .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("wheel"))
                             .onChanged { value in
+                                guard !point.white || editor.strip == "WS2805" else { editor.selected = point.id; return }
                                 editor.dragging = true; editor.selected = point.id
                                 editor.points[index].move(x: (value.location.x - radius) / radius, y: (value.location.y - radius) / radius)
                             }.onEnded { _ in editor.dragging = false; editor.apply() })
                         .accessibilityElement(children: .ignore).accessibilityLabel("Color point \(index + 1)")
-                        .accessibilityValue(point.white ? "White temperature \(Int(point.temperature * 100)) percent" : "Hue \(Int(point.hue * 360)) degrees, saturation \(Int(point.saturation * 100)) percent")
+                        .accessibilityValue(point.white ? (editor.strip == "WS2805" ? "White temperature \(Int(point.temperature * 100)) percent" : "White channel") : "Hue \(Int(point.hue * 360)) degrees, saturation \(Int(point.saturation * 100)) percent")
                         .accessibilityAdjustableAction { direction in
-                            editor.selected = point.id
+                            guard !point.white || editor.strip == "WS2805" else { return }
+                            editor.selected = point.id; editor.points[index].originalChannels = nil
                             let delta = direction == .increment ? 0.05 : -0.05
                             if point.white { editor.points[index].temperature = min(max(point.temperature + delta, 0), 1) }
                             else { editor.points[index].hue = (point.hue + delta + 1).truncatingRemainder(dividingBy: 1) }

@@ -7,13 +7,44 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02237A99711CE41430CDA621 /* ldebug.c in Sources */ = {isa = PBXBuildFile; fileRef = 676C240F9232382D06F9AFE7 /* ldebug.c */; };
+		039FCFD517876704CA9C1415 /* ltable.c in Sources */ = {isa = PBXBuildFile; fileRef = 034BB468F17304BE817D4582 /* ltable.c */; };
+		043C4A54A7DF441E89D07857 /* lbaselib.c in Sources */ = {isa = PBXBuildFile; fileRef = 81EF157F91147A7CC565BB23 /* lbaselib.c */; };
+		0DA355B2D5FEC5A0E1999D84 /* lzio.c in Sources */ = {isa = PBXBuildFile; fileRef = 73AA1B08043F6B3C93A2B28D /* lzio.c */; };
+		12C9140935C52CB03BBEF1F8 /* LICENSE.html in Resources */ = {isa = PBXBuildFile; fileRef = 337DD7D249A19D6706527B4B /* LICENSE.html */; };
 		1459CBA74F6A2CC5C33E6DF1 /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7185ABA55ABF001F566F64A6 /* Protocol.swift */; };
 		1ABF47BAA295DB5D7E4B0485 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */; };
+		1D6B8396CD58CFA8DCAF5E77 /* lstrlib.c in Sources */ = {isa = PBXBuildFile; fileRef = DAD03CD68732ECBDC89BBA92 /* lstrlib.c */; };
+		1F386099C19EA3EFDCFFD1EB /* lobject.c in Sources */ = {isa = PBXBuildFile; fileRef = 970C1014473A014B35A4BFD2 /* lobject.c */; };
+		26CB2EBEAE0CD6CBE438D573 /* lstate.c in Sources */ = {isa = PBXBuildFile; fileRef = 03C4D9106A4B56D18B525E11 /* lstate.c */; };
 		282A48F0FB9B3FAC8002A5CD /* ColorEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD59EC634E5BEDF0BBE9E173 /* ColorEditor.swift */; };
+		294B4E22D18DFCE070FC3194 /* lundump.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DEECC249416E5C1427DB4F /* lundump.c */; };
 		2CB5B27B6685EF59D4B441AD /* SavedLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44EFDE9FE4CCB35799C69816 /* SavedLibraryTests.swift */; };
 		2D1023F1A0FBB575F01D0EF0 /* Gradient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D384970AE45BE4C62255BCC /* Gradient.swift */; };
+		4E431FBE7B73E71C181675DC /* lfunc.c in Sources */ = {isa = PBXBuildFile; fileRef = AAD755C5E65508CDF632675C /* lfunc.c */; };
 		5B660AD1EAA416495EC2AD44 /* LuxioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE14CC964F0ECC58ECE028CE /* LuxioApp.swift */; };
+		5FD35811315C5B0ED85D809A /* ltablib.c in Sources */ = {isa = PBXBuildFile; fileRef = 07BA2A12950E6B9F207E380B /* ltablib.c */; };
+		67A758A8165EB5CB3BAB217E /* ldo.c in Sources */ = {isa = PBXBuildFile; fileRef = C25E3831989A1704764BFE7F /* ldo.c */; };
+		75ABBD8AD35ACA663CE642C9 /* ldump.c in Sources */ = {isa = PBXBuildFile; fileRef = E440294F48A72C5AD83EB7FE /* ldump.c */; };
+		7BDF7D9B3F49E6FB733DCDD0 /* lparser.c in Sources */ = {isa = PBXBuildFile; fileRef = D66852DE2E871177BF0ED449 /* lparser.c */; };
+		7D2323C4E40E76D355402E14 /* lgc.c in Sources */ = {isa = PBXBuildFile; fileRef = 4EE737DC7DD93D7688E41EAC /* lgc.c */; };
+		94132D346A42EFC2778DF78B /* LightPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = B93D4EC7916F6CFB71BC84BF /* LightPalette.swift */; };
+		94E849748A0349F4956618D5 /* lstring.c in Sources */ = {isa = PBXBuildFile; fileRef = B022284564DA75D6C464F7D1 /* lstring.c */; };
+		A4660D4C992C5A0435F56C97 /* lapi.c in Sources */ = {isa = PBXBuildFile; fileRef = 564938580423CA9E2E061415 /* lapi.c */; };
 		A6AA7DB9D8F06F2E4D165AB9 /* Presets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8AE88F9C29F6942AD9A999B /* Presets.swift */; };
+		A6B56961BD1C1A647867E4CB /* lmem.c in Sources */ = {isa = PBXBuildFile; fileRef = 220AD877400BA9B33F8F9A93 /* lmem.c */; };
+		A7B2F05EFF2DC05581E973B0 /* lutf8lib.c in Sources */ = {isa = PBXBuildFile; fileRef = D8A2FCA8688093E174981451 /* lutf8lib.c */; };
+		ACD6933146FFA0786F6D533E /* AnimationRuntime.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C4CC4EF5D25FB32DEFE7AD6 /* AnimationRuntime.c */; };
+		B01A70BDAD0F2A9056663AA0 /* lcode.c in Sources */ = {isa = PBXBuildFile; fileRef = CE039FA569D6FD5EEA6E1CBF /* lcode.c */; };
+		BBBA4BA83886B15EA6DCD508 /* lopcodes.c in Sources */ = {isa = PBXBuildFile; fileRef = FE8FD2E8B3BF344B027F2E4B /* lopcodes.c */; };
+		C9F0626178F7F0C661BEE348 /* llex.c in Sources */ = {isa = PBXBuildFile; fileRef = D7945C37CAA049A9F36B82A7 /* llex.c */; };
+		D234FDDDD6663922651CDA54 /* lauxlib.c in Sources */ = {isa = PBXBuildFile; fileRef = F1106A6A5D3F9B2E2FF81B2F /* lauxlib.c */; };
+		D50B8F40A79E10843F9933B1 /* InteractiveBackGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71D3EC4B8944A1937520E470 /* InteractiveBackGesture.swift */; };
+		D585CA0007C9658AD4EB7526 /* AnimationPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6BFB4E4E04A6858BBE209B5 /* AnimationPreview.swift */; };
+		DA247BF8AB7425CBEBA290BB /* ltm.c in Sources */ = {isa = PBXBuildFile; fileRef = 75E1493B1CA2E47B75AC7B1E /* ltm.c */; };
+		E27D2EDCD8F2B1DAB616E682 /* lvm.c in Sources */ = {isa = PBXBuildFile; fileRef = E29BFB02248C3182A94FC221 /* lvm.c */; };
+		FDC804FC549A350AC423EBFB /* lctype.c in Sources */ = {isa = PBXBuildFile; fileRef = E252CEA7636BC03A28501BCB /* lctype.c */; };
+		FEB78047D465A3E4C3EA1008 /* lmathlib.c in Sources */ = {isa = PBXBuildFile; fileRef = 004F9E6537B53A1C5CA65C2D /* lmathlib.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,16 +58,76 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		004F9E6537B53A1C5CA65C2D /* lmathlib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lmathlib.c; sourceTree = "<group>"; };
+		034BB468F17304BE817D4582 /* ltable.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ltable.c; sourceTree = "<group>"; };
+		03C4D9106A4B56D18B525E11 /* lstate.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lstate.c; sourceTree = "<group>"; };
+		07BA2A12950E6B9F207E380B /* ltablib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ltablib.c; sourceTree = "<group>"; };
+		0C7A4D8211CB421C44EE715B /* lstring.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lstring.h; sourceTree = "<group>"; };
+		13521F980A5D7FB08DE55D2E /* luaconf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = luaconf.h; sourceTree = "<group>"; };
+		220AD877400BA9B33F8F9A93 /* lmem.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lmem.c; sourceTree = "<group>"; };
 		2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		23915A95E2A6701745591256 /* lauxlib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lauxlib.h; sourceTree = "<group>"; };
+		337DD7D249A19D6706527B4B /* LICENSE.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = LICENSE.html; sourceTree = "<group>"; };
+		33D615100F9B2FB28089597F /* lapi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lapi.h; sourceTree = "<group>"; };
+		3A6414CA5C02827F448C3F31 /* lundump.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lundump.h; sourceTree = "<group>"; };
 		3D384970AE45BE4C62255BCC /* Gradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gradient.swift; sourceTree = "<group>"; };
+		44D20D7244AE7BCE58E0F49C /* ltm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ltm.h; sourceTree = "<group>"; };
 		44EFDE9FE4CCB35799C69816 /* SavedLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedLibraryTests.swift; sourceTree = "<group>"; };
+		491241641FE806179B2BC17B /* lmem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lmem.h; sourceTree = "<group>"; };
+		49A3E5C29041B2B0B3B28C1C /* ljumptab.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ljumptab.h; sourceTree = "<group>"; };
+		4EE737DC7DD93D7688E41EAC /* lgc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lgc.c; sourceTree = "<group>"; };
+		54D6A2F3594A405F75F9C7BF /* llimits.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = llimits.h; sourceTree = "<group>"; };
+		564938580423CA9E2E061415 /* lapi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lapi.c; sourceTree = "<group>"; };
+		5B64E052B7299B9F93871E0F /* lzio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lzio.h; sourceTree = "<group>"; };
+		61472BF82B9CD195062137CF /* AnimationRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationRuntime.h; sourceTree = "<group>"; };
+		62A4BB640CE0DEF2D9C424F4 /* lprefix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lprefix.h; sourceTree = "<group>"; };
+		676C240F9232382D06F9AFE7 /* ldebug.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ldebug.c; sourceTree = "<group>"; };
+		6C4CC4EF5D25FB32DEFE7AD6 /* AnimationRuntime.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = AnimationRuntime.c; sourceTree = "<group>"; };
+		70BAC073FED716757C2F55F6 /* lopnames.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lopnames.h; sourceTree = "<group>"; };
 		70C3FF76E6EE50132A56856C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		715BF00D55CEBA7567EB32CD /* lobject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lobject.h; sourceTree = "<group>"; };
 		7185ABA55ABF001F566F64A6 /* Protocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Protocol.swift; sourceTree = "<group>"; };
+		71D3EC4B8944A1937520E470 /* InteractiveBackGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveBackGesture.swift; sourceTree = "<group>"; };
+		73AA1B08043F6B3C93A2B28D /* lzio.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lzio.c; sourceTree = "<group>"; };
+		75E1493B1CA2E47B75AC7B1E /* ltm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ltm.c; sourceTree = "<group>"; };
+		7FCF008406898768FAF633EE /* ldebug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ldebug.h; sourceTree = "<group>"; };
+		81EF157F91147A7CC565BB23 /* lbaselib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lbaselib.c; sourceTree = "<group>"; };
 		8465161F1923299B6EF019C0 /* LuxioUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LuxioUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BFD2E2A2B8CC8F857A835AA /* llex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = llex.h; sourceTree = "<group>"; };
+		8F22202005DE6E53C132DAE6 /* lparser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lparser.h; sourceTree = "<group>"; };
+		8FBA8AD8820172CD3A6A2B91 /* Luxio-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Luxio-Bridging-Header.h"; sourceTree = "<group>"; };
+		92FE1F1D96549875B65C54EF /* lcode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lcode.h; sourceTree = "<group>"; };
+		970C1014473A014B35A4BFD2 /* lobject.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lobject.c; sourceTree = "<group>"; };
+		A1DEECC249416E5C1427DB4F /* lundump.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lundump.c; sourceTree = "<group>"; };
+		A6ABE42E45D030477011F6B8 /* lctype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lctype.h; sourceTree = "<group>"; };
+		A7118CDBF2004547D812A010 /* lstate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lstate.h; sourceTree = "<group>"; };
+		AAD755C5E65508CDF632675C /* lfunc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lfunc.c; sourceTree = "<group>"; };
+		ABCD5D1FC4009FB88E0C6D8A /* lua.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lua.h; sourceTree = "<group>"; };
+		B022284564DA75D6C464F7D1 /* lstring.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lstring.c; sourceTree = "<group>"; };
+		B93D4EC7916F6CFB71BC84BF /* LightPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightPalette.swift; sourceTree = "<group>"; };
+		BA6453DB4AC12641CAE0791A /* lualib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lualib.h; sourceTree = "<group>"; };
+		C25E3831989A1704764BFE7F /* ldo.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ldo.c; sourceTree = "<group>"; };
+		C632AD640BBFDC6E085F6074 /* lopcodes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lopcodes.h; sourceTree = "<group>"; };
+		C6BFB4E4E04A6858BBE209B5 /* AnimationPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationPreview.swift; sourceTree = "<group>"; };
+		C83931DF93342C1500CB96AC /* ltable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ltable.h; sourceTree = "<group>"; };
+		CE039FA569D6FD5EEA6E1CBF /* lcode.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lcode.c; sourceTree = "<group>"; };
 		D3C7AFB1EC89FBB7C3B6DED8 /* Luxio.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Luxio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4ED41AD356BD95854C85543 /* lgc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lgc.h; sourceTree = "<group>"; };
+		D66852DE2E871177BF0ED449 /* lparser.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lparser.c; sourceTree = "<group>"; };
+		D7945C37CAA049A9F36B82A7 /* llex.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = llex.c; sourceTree = "<group>"; };
+		D8A2FCA8688093E174981451 /* lutf8lib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lutf8lib.c; sourceTree = "<group>"; };
 		D8AE88F9C29F6942AD9A999B /* Presets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Presets.swift; sourceTree = "<group>"; };
+		DAD03CD68732ECBDC89BBA92 /* lstrlib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lstrlib.c; sourceTree = "<group>"; };
 		DD59EC634E5BEDF0BBE9E173 /* ColorEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorEditor.swift; sourceTree = "<group>"; };
+		DD766089465B1C23628958D0 /* ldo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ldo.h; sourceTree = "<group>"; };
+		E252CEA7636BC03A28501BCB /* lctype.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lctype.c; sourceTree = "<group>"; };
+		E29BFB02248C3182A94FC221 /* lvm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lvm.c; sourceTree = "<group>"; };
+		E440294F48A72C5AD83EB7FE /* ldump.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ldump.c; sourceTree = "<group>"; };
+		EA3A358B6F302716C63DB055 /* lvm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lvm.h; sourceTree = "<group>"; };
+		F1106A6A5D3F9B2E2FF81B2F /* lauxlib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lauxlib.c; sourceTree = "<group>"; };
+		F80BB5824B9F727913144F12 /* lfunc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lfunc.h; sourceTree = "<group>"; };
 		FE14CC964F0ECC58ECE028CE /* LuxioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LuxioApp.swift; sourceTree = "<group>"; };
+		FE8FD2E8B3BF344B027F2E4B /* lopcodes.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lopcodes.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -47,6 +138,77 @@
 				2C05FE2FBC6AC9024D51FA94 /* UITests */,
 				D3D05571BD1D8DA806ED197D /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		10A01E4A929A173990AE94ED /* lua */ = {
+			isa = PBXGroup;
+			children = (
+				564938580423CA9E2E061415 /* lapi.c */,
+				33D615100F9B2FB28089597F /* lapi.h */,
+				F1106A6A5D3F9B2E2FF81B2F /* lauxlib.c */,
+				23915A95E2A6701745591256 /* lauxlib.h */,
+				81EF157F91147A7CC565BB23 /* lbaselib.c */,
+				CE039FA569D6FD5EEA6E1CBF /* lcode.c */,
+				92FE1F1D96549875B65C54EF /* lcode.h */,
+				E252CEA7636BC03A28501BCB /* lctype.c */,
+				A6ABE42E45D030477011F6B8 /* lctype.h */,
+				676C240F9232382D06F9AFE7 /* ldebug.c */,
+				7FCF008406898768FAF633EE /* ldebug.h */,
+				C25E3831989A1704764BFE7F /* ldo.c */,
+				DD766089465B1C23628958D0 /* ldo.h */,
+				E440294F48A72C5AD83EB7FE /* ldump.c */,
+				AAD755C5E65508CDF632675C /* lfunc.c */,
+				F80BB5824B9F727913144F12 /* lfunc.h */,
+				4EE737DC7DD93D7688E41EAC /* lgc.c */,
+				D4ED41AD356BD95854C85543 /* lgc.h */,
+				337DD7D249A19D6706527B4B /* LICENSE.html */,
+				49A3E5C29041B2B0B3B28C1C /* ljumptab.h */,
+				D7945C37CAA049A9F36B82A7 /* llex.c */,
+				8BFD2E2A2B8CC8F857A835AA /* llex.h */,
+				54D6A2F3594A405F75F9C7BF /* llimits.h */,
+				004F9E6537B53A1C5CA65C2D /* lmathlib.c */,
+				220AD877400BA9B33F8F9A93 /* lmem.c */,
+				491241641FE806179B2BC17B /* lmem.h */,
+				970C1014473A014B35A4BFD2 /* lobject.c */,
+				715BF00D55CEBA7567EB32CD /* lobject.h */,
+				FE8FD2E8B3BF344B027F2E4B /* lopcodes.c */,
+				C632AD640BBFDC6E085F6074 /* lopcodes.h */,
+				70BAC073FED716757C2F55F6 /* lopnames.h */,
+				D66852DE2E871177BF0ED449 /* lparser.c */,
+				8F22202005DE6E53C132DAE6 /* lparser.h */,
+				62A4BB640CE0DEF2D9C424F4 /* lprefix.h */,
+				03C4D9106A4B56D18B525E11 /* lstate.c */,
+				A7118CDBF2004547D812A010 /* lstate.h */,
+				B022284564DA75D6C464F7D1 /* lstring.c */,
+				0C7A4D8211CB421C44EE715B /* lstring.h */,
+				DAD03CD68732ECBDC89BBA92 /* lstrlib.c */,
+				034BB468F17304BE817D4582 /* ltable.c */,
+				C83931DF93342C1500CB96AC /* ltable.h */,
+				07BA2A12950E6B9F207E380B /* ltablib.c */,
+				75E1493B1CA2E47B75AC7B1E /* ltm.c */,
+				44D20D7244AE7BCE58E0F49C /* ltm.h */,
+				ABCD5D1FC4009FB88E0C6D8A /* lua.h */,
+				13521F980A5D7FB08DE55D2E /* luaconf.h */,
+				BA6453DB4AC12641CAE0791A /* lualib.h */,
+				A1DEECC249416E5C1427DB4F /* lundump.c */,
+				3A6414CA5C02827F448C3F31 /* lundump.h */,
+				D8A2FCA8688093E174981451 /* lutf8lib.c */,
+				E29BFB02248C3182A94FC221 /* lvm.c */,
+				EA3A358B6F302716C63DB055 /* lvm.h */,
+				73AA1B08043F6B3C93A2B28D /* lzio.c */,
+				5B64E052B7299B9F93871E0F /* lzio.h */,
+			);
+			path = lua;
+			sourceTree = "<group>";
+		};
+		2A8A48E1D35C8F4C7EFA9188 /* Native */ = {
+			isa = PBXGroup;
+			children = (
+				6C4CC4EF5D25FB32DEFE7AD6 /* AnimationRuntime.c */,
+				61472BF82B9CD195062137CF /* AnimationRuntime.h */,
+				10A01E4A929A173990AE94ED /* lua */,
+			);
+			path = Native;
 			sourceTree = "<group>";
 		};
 		2C05FE2FBC6AC9024D51FA94 /* UITests */ = {
@@ -69,13 +231,18 @@
 		EA9785521510FFC30481315E /* Luxio */ = {
 			isa = PBXGroup;
 			children = (
+				C6BFB4E4E04A6858BBE209B5 /* AnimationPreview.swift */,
 				2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */,
 				DD59EC634E5BEDF0BBE9E173 /* ColorEditor.swift */,
 				3D384970AE45BE4C62255BCC /* Gradient.swift */,
 				70C3FF76E6EE50132A56856C /* Info.plist */,
+				71D3EC4B8944A1937520E470 /* InteractiveBackGesture.swift */,
+				B93D4EC7916F6CFB71BC84BF /* LightPalette.swift */,
+				8FBA8AD8820172CD3A6A2B91 /* Luxio-Bridging-Header.h */,
 				FE14CC964F0ECC58ECE028CE /* LuxioApp.swift */,
 				D8AE88F9C29F6942AD9A999B /* Presets.swift */,
 				7185ABA55ABF001F566F64A6 /* Protocol.swift */,
+				2A8A48E1D35C8F4C7EFA9188 /* Native */,
 			);
 			path = Luxio;
 			sourceTree = "<group>";
@@ -163,6 +330,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1ABF47BAA295DB5D7E4B0485 /* Assets.xcassets in Resources */,
+				12C9140935C52CB03BBEF1F8 /* LICENSE.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -181,11 +349,41 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D585CA0007C9658AD4EB7526 /* AnimationPreview.swift in Sources */,
+				ACD6933146FFA0786F6D533E /* AnimationRuntime.c in Sources */,
 				282A48F0FB9B3FAC8002A5CD /* ColorEditor.swift in Sources */,
 				2D1023F1A0FBB575F01D0EF0 /* Gradient.swift in Sources */,
+				D50B8F40A79E10843F9933B1 /* InteractiveBackGesture.swift in Sources */,
+				94132D346A42EFC2778DF78B /* LightPalette.swift in Sources */,
 				5B660AD1EAA416495EC2AD44 /* LuxioApp.swift in Sources */,
 				A6AA7DB9D8F06F2E4D165AB9 /* Presets.swift in Sources */,
 				1459CBA74F6A2CC5C33E6DF1 /* Protocol.swift in Sources */,
+				A4660D4C992C5A0435F56C97 /* lapi.c in Sources */,
+				D234FDDDD6663922651CDA54 /* lauxlib.c in Sources */,
+				043C4A54A7DF441E89D07857 /* lbaselib.c in Sources */,
+				B01A70BDAD0F2A9056663AA0 /* lcode.c in Sources */,
+				FDC804FC549A350AC423EBFB /* lctype.c in Sources */,
+				02237A99711CE41430CDA621 /* ldebug.c in Sources */,
+				67A758A8165EB5CB3BAB217E /* ldo.c in Sources */,
+				75ABBD8AD35ACA663CE642C9 /* ldump.c in Sources */,
+				4E431FBE7B73E71C181675DC /* lfunc.c in Sources */,
+				7D2323C4E40E76D355402E14 /* lgc.c in Sources */,
+				C9F0626178F7F0C661BEE348 /* llex.c in Sources */,
+				FEB78047D465A3E4C3EA1008 /* lmathlib.c in Sources */,
+				A6B56961BD1C1A647867E4CB /* lmem.c in Sources */,
+				1F386099C19EA3EFDCFFD1EB /* lobject.c in Sources */,
+				BBBA4BA83886B15EA6DCD508 /* lopcodes.c in Sources */,
+				7BDF7D9B3F49E6FB733DCDD0 /* lparser.c in Sources */,
+				26CB2EBEAE0CD6CBE438D573 /* lstate.c in Sources */,
+				94E849748A0349F4956618D5 /* lstring.c in Sources */,
+				1D6B8396CD58CFA8DCAF5E77 /* lstrlib.c in Sources */,
+				039FCFD517876704CA9C1415 /* ltable.c in Sources */,
+				5FD35811315C5B0ED85D809A /* ltablib.c in Sources */,
+				DA247BF8AB7425CBEBA290BB /* ltm.c in Sources */,
+				294B4E22D18DFCE070FC3194 /* lundump.c in Sources */,
+				A7B2F05EFF2DC05581E973B0 /* lutf8lib.c in Sources */,
+				E27D2EDCD8F2B1DAB616E682 /* lvm.c in Sources */,
+				0DA355B2D5FEC5A0E1999D84 /* lzio.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -274,15 +472,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 44;
 				INFOPLIST_FILE = Luxio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.7;
+				MARKETING_VERSION = 0.1.43;
 				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.app;
 				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "Luxio/Luxio-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -309,15 +508,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 44;
 				INFOPLIST_FILE = Luxio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.7;
+				MARKETING_VERSION = 0.1.43;
 				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.app;
 				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "Luxio/Luxio-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;

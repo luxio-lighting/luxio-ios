@@ -1,33 +1,619 @@
 import XCTest
 
 final class SavedLibraryTests: XCTestCase {
-    func testSavePlayAndDeleteGradient() throws {
+    func testRenameSavedItems() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/rename"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        for mode in ["Color", "Gradient", "Animation"] {
+            app.segmentedControls.buttons[mode].tap()
+            let oldName = "Saved " + mode.lowercased()
+            let prefix = mode == "Animation" ? "Play " : "Apply "
+            let tile = app.buttons[prefix + oldName]
+            for _ in 0..<15 {
+                if tile.exists && tile.isHittable { break }
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.3)))
+            }
+            XCTAssertTrue(tile.isHittable)
+            tile.press(forDuration: 1)
+            XCTAssertTrue(app.buttons["Rename"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.buttons["Delete"].exists)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = mode + " context menu"; screenshot.lifetime = .keepAlways; add(screenshot)
+            app.buttons["Rename"].tap()
+            let alert = app.alerts["Rename"]
+            XCTAssertTrue(alert.waitForExistence(timeout: 5))
+            let field = alert.textFields.firstMatch
+            XCTAssertEqual(field.value as? String, oldName)
+            field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: oldName.count))
+            XCTAssertFalse(alert.buttons["Save"].isEnabled)
+            field.typeText("Renamed " + mode)
+            alert.buttons["Save"].tap()
+            XCTAssertTrue(app.buttons[prefix + "Renamed " + mode].waitForExistence(timeout: 10))
+            XCTAssertFalse(tile.exists)
+        }
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        for mode in ["Color", "Gradient", "Animation"] {
+            app.segmentedControls.buttons[mode].tap()
+            let tile = app.buttons[(mode == "Animation" ? "Play " : "Apply ") + "Renamed " + mode]
+            for _ in 0..<15 {
+                if tile.exists && tile.isHittable { break }
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.3)))
+            }
+            XCTAssertTrue(tile.exists)
+        }
+    }
+
+    func testNewGradientPointStaysSelected() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/point-selection"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        app.segmentedControls.buttons["Gradient"].tap()
+        let add = app.buttons["Add point"]
+        for _ in 0..<6 {
+            if add.exists && add.isHittable { break }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)))
+        }
+        for number in [3, 4] {
+            add.tap()
+            let added = app.buttons["Select point \(number)"]
+            XCTAssertTrue(added.waitForExistence(timeout: 5))
+            XCTAssertTrue(added.isSelected)
+            // Cover both the write response and the following periodic device refresh.
+            Thread.sleep(forTimeInterval: 5)
+            XCTAssertTrue(added.isSelected)
+            XCTAssertFalse(app.buttons["Select point 1"].isSelected)
+            XCTAssertTrue(app.buttons["Remove point \(number)"].exists)
+        }
+    }
+
+    func testWhitePickerMovesHorizontallyWithoutChangingTemperature() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/white-drag"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        let point = app.otherElements["Color point 1"]
+        XCTAssertTrue(point.waitForExistence(timeout: 10))
+        let temperature = point.value as? String
+        XCTAssertTrue(temperature?.hasPrefix("White temperature") == true)
+        for distance in [70.0, -140.0] {
+            let before = point.frame
+            let start = point.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: distance, dy: 0)))
+            XCTAssertEqual(point.frame.midX, before.midX + distance, accuracy: 2)
+            XCTAssertEqual(point.frame.midY, before.midY, accuracy: 2)
+            XCTAssertEqual(point.value as? String, temperature)
+        }
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Free white picker"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
+    func testSaveTilesAppendPresets() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/save-tiles"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        for mode in ["Color", "Gradient"] {
+            app.segmentedControls.buttons[mode].tap()
+            let save = app.buttons["save-preset"]
+            for _ in 0..<15 {
+                if save.exists && save.isHittable { break }
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.3)))
+            }
+            XCTAssertTrue(save.isHittable)
+            XCTAssertEqual(save.label, "Save")
+            XCTAssertTrue(app.staticTexts["saved-empty-state"].exists)
+            XCTAssertTrue(app.staticTexts["Presets"].exists)
+            XCTAssertTrue(app.staticTexts["Saved"].exists)
+            XCTAssertLessThan(app.staticTexts["Presets"].frame.minY, app.staticTexts["Saved"].frame.minY)
+            XCTAssertLessThan(app.staticTexts["Saved"].frame.maxY, save.frame.minY)
+            let position = save.frame
+            save.tap()
+            let alert = app.alerts.firstMatch
+            XCTAssertTrue(alert.waitForExistence(timeout: 5))
+            XCTAssertEqual(alert.label, "Save " + mode)
+            XCTAssertTrue(alert.staticTexts["Save a copy on Library test."].exists)
+            alert.textFields.firstMatch.tap(); alert.textFields.firstMatch.typeText("Custom " + mode)
+            alert.buttons["Save"].tap()
+            let saved = app.buttons["Apply Custom " + mode]
+            XCTAssertTrue(saved.waitForExistence(timeout: 10))
+            XCTAssertTrue(alert.waitForNonExistence(timeout: 5))
+            XCTAssertFalse(app.staticTexts["saved-empty-state"].exists)
+            XCTAssertFalse(app.staticTexts["studio-hint"].exists)
+            Thread.sleep(forTimeInterval: 0.5)
+            XCTAssertEqual(saved.frame.minX, position.minX, accuracy: 1)
+            XCTAssertEqual(saved.frame.minY, position.minY, accuracy: 1)
+            XCTAssertTrue(save.frame.minY > saved.frame.minY || save.frame.minX > saved.frame.minX)
+            XCTAssertEqual(app.buttons.matching(identifier: "save-preset").count, 1)
+            saved.tap()
+            expectation(for: NSPredicate(format: "value == 'Selected'"), evaluatedWith: saved)
+            waitForExpectations(timeout: 10)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = mode + " save tile"; screenshot.lifetime = .keepAlways; add(screenshot)
+            save.tap()
+            XCTAssertTrue(alert.waitForExistence(timeout: 5))
+            alert.buttons["Cancel"].tap()
+            XCTAssertTrue(saved.exists)
+        }
+    }
+
+    func testEmptySavedAnimations() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/save-tiles"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        app.segmentedControls.buttons["Animation"].tap()
+        XCTAssertTrue(app.staticTexts["saved-empty-state"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["saved-empty-state"].label, "No saved animations yet.")
+        XCTAssertTrue(app.staticTexts["studio-hint"].exists)
+        XCTAssertEqual(app.staticTexts["studio-hint"].label, "To create your own animations, try Luxio Studio.")
+        for _ in 0..<3 {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.35)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)))
+        }
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[cd] 'cancelled'")).firstMatch.exists)
+    }
+
+    func testColorWheelSwitchKeepsLayoutStable() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/slow"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        app.segmentedControls.buttons["Color"].tap()
+        let heading = app.staticTexts["Presets"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 10))
+        let originalY = heading.frame.minY
+        for wheel in ["White temperature wheel", "Color wheel"] {
+            app.buttons[wheel].tap()
+            Thread.sleep(forTimeInterval: 1)
+            XCTAssertFalse(app.activityIndicators["Applying colors"].exists)
+            XCTAssertEqual(heading.frame.minY, originalY, accuracy: 1)
+            Thread.sleep(forTimeInterval: 6)
+            XCTAssertEqual(heading.frame.minY, originalY, accuracy: 1)
+        }
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Hue sorted colors"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
+    func testAnimationsAreReplacedRatherThanStopped() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/animations"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        app.segmentedControls.buttons["Animation"].tap()
+        let rainbow = app.buttons["preset-Rainbow"]
+        let saved = app.buttons["Play Saved animation"]
+        for animation in [rainbow, saved] {
+            for _ in 0..<6 {
+                if animation.isHittable { break }
+                app.swipeUp()
+            }
+            animation.tap()
+            expectation(for: NSPredicate(format: "value == 'Playing'"), evaluatedWith: animation)
+            waitForExpectations(timeout: 10)
+            animation.tap()
+            expectation(for: NSPredicate(format: "value == 'Playing'"), evaluatedWith: animation)
+            waitForExpectations(timeout: 10)
+            XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Stop '")).firstMatch.exists)
+        }
+        XCTAssertNotEqual(rainbow.value as? String, "Playing")
+        app.segmentedControls.buttons["Gradient"].tap()
+        let sunset = app.buttons["preset-Sunset"]
+        for _ in 0..<6 { if sunset.isHittable { break }; app.swipeUp() }
+        sunset.tap()
+        expectation(for: NSPredicate(format: "value == 'Selected'"), evaluatedWith: sunset)
+        waitForExpectations(timeout: 10)
+        app.segmentedControls.buttons["Animation"].tap()
+        for _ in 0..<6 { if rainbow.isHittable { break }; app.swipeDown() }
+        rainbow.tap()
+        expectation(for: NSPredicate(format: "value == 'Playing'"), evaluatedWith: rainbow)
+        waitForExpectations(timeout: 10)
+        app.segmentedControls.buttons["Color"].tap()
+        let relax = app.buttons["color-Relax"]
+        for _ in 0..<6 { if relax.isHittable { break }; app.swipeUp() }
+        relax.tap()
+        expectation(for: NSPredicate(format: "value == 'Selected'"), evaluatedWith: relax)
+        waitForExpectations(timeout: 10)
+    }
+
+    func testSettingsLayout() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/settings"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        XCTAssertTrue(app.buttons["Light settings"].waitForExistence(timeout: 10))
+        app.buttons["Light settings"].tap()
+        let count = app.textFields["settings-count"]
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        let save = app.navigationBars.buttons["Save"]
+        // Invalid numeric values must never reach the device.
+        for value in ["0", "1025", "61"] {
+            count.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+            count.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (count.value as? String ?? "").count) + value)
+            XCTAssertEqual(save.isEnabled, value == "61")
+        }
+        let pin = app.textFields["settings-gpio"]
+        for value in ["55", "17"] {
+            pin.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+            pin.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (pin.value as? String ?? "").count) + value)
+            XCTAssertEqual(save.isEnabled, value == "17")
+        }
+        save.tap()
+        XCTAssertTrue(save.waitForNonExistence(timeout: 10))
+        app.buttons["Light settings"].tap()
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        XCTAssertEqual(count.value as? String, "61")
+        XCTAssertEqual(pin.value as? String, "17")
+        app.buttons["Show Pairing Code"].tap()
+        let code = app.staticTexts["pairing-code"]
+        XCTAssertTrue(code.waitForExistence(timeout: 10))
+        app.swipeUp()
+        app.buttons["copy-pairing-code"].tap()
+        XCTAssertEqual(app.buttons["copy-pairing-code"].label, "Pairing Code Copied")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Settings with pairing code"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
+    func testLiveAnimationPreviews() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/live"
+        app.launch()
+        let light = app.buttons["Library test"]
+        XCTAssertTrue(light.waitForExistence(timeout: 15))
+        Thread.sleep(forTimeInterval: 1)
+        let home1 = XCTAttachment(screenshot: app.screenshot()); home1.name = "Live home frame 1"; home1.lifetime = .keepAlways; add(home1)
+        Thread.sleep(forTimeInterval: 0.7)
+        let home2 = XCTAttachment(screenshot: app.screenshot()); home2.name = "Live home frame 2"; home2.lifetime = .keepAlways; add(home2)
+        light.tap()
+        XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 1)
+        let header1 = XCTAttachment(screenshot: app.screenshot()); header1.name = "Live header frame 1"; header1.lifetime = .keepAlways; add(header1)
+        Thread.sleep(forTimeInterval: 0.7)
+        let header2 = XCTAttachment(screenshot: app.screenshot()); header2.name = "Live header frame 2"; header2.lifetime = .keepAlways; add(header2)
+        app.switches["Power"].tap()
+        Thread.sleep(forTimeInterval: 1)
+        let off = XCTAttachment(screenshot: app.screenshot()); off.name = "Live preview powered off"; off.lifetime = .keepAlways; add(off)
+        app.navigationBars["Library test"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(light.waitForExistence(timeout: 5))
+    }
+
+    func testLoadingStaysInsideSelectedCard() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/slow"
+        app.launch()
+        let light = app.buttons["Library test"]
+        XCTAssertTrue(light.waitForExistence(timeout: 15)); light.tap()
+        XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 10))
+        for (mode, first, second) in [
+            ("Color", "color-Relax", "color-Read"),
+            ("Color", "Apply Saved color 1", "Apply Saved color 2"),
+            ("Gradient", "preset-Sunset", "preset-Lagoon"),
+            ("Gradient", "Apply Saved gradient 1", "Apply Saved gradient 2"),
+            ("Animation", "preset-Ember", "preset-Tidal"),
+            ("Animation", "Play Saved animation 1", "Play Saved animation 2")
+        ] {
+            app.segmentedControls.buttons[mode].tap()
+            let card = app.buttons[first]
+            for _ in 0..<8 {
+                if card.isHittable { break }
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.35)))
+            }
+            XCTAssertTrue(card.waitForExistence(timeout: 10)); card.tap()
+            XCTAssertEqual(card.value as? String, "Loading")
+            XCTAssertFalse(card.isEnabled)
+            XCTAssertTrue(app.buttons[second].isEnabled)
+            XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).isEnabled)
+            XCTAssertTrue(app.segmentedControls.buttons["Color"].isEnabled)
+            let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Loading \(first)"; screenshot.lifetime = .keepAlways; add(screenshot)
+            expectation(for: NSPredicate(format: "exists == true AND value != 'Loading' AND enabled == true"), evaluatedWith: card)
+            waitForExpectations(timeout: 15)
+        }
+        // Other selections stay available and complete in tap order.
+        let rainbow = app.buttons["preset-Rainbow"]
+        for _ in 0..<4 { if rainbow.isHittable { break }; app.swipeDown() }
+        rainbow.tap()
+        app.buttons["preset-Colorloop"].tap()
+        XCTAssertEqual(app.buttons["preset-Colorloop"].value as? String, "Loading")
+        expectation(for: NSPredicate(format: "value == 'Playing'"), evaluatedWith: app.buttons["preset-Colorloop"])
+        waitForExpectations(timeout: 20)
+        XCTAssertNotEqual(rainbow.value as? String, "Playing")
+    }
+
+    func testInteractiveSwipeBack() throws {
         let app = XCUIApplication()
         app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082"
         app.launch()
         let light = app.buttons["Library test"]
         XCTAssertTrue(light.waitForExistence(timeout: 15)); light.tap()
-        let save = app.buttons["Save gradient"]
-        XCTAssertTrue(save.waitForExistence(timeout: 10)); save.tap()
-        let alert = app.alerts["Save gradient"]
+        XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 10))
+        let navigation = XCTAttachment(screenshot: app.screenshot())
+        navigation.name = "Native glass navigation"; navigation.lifetime = .keepAlways; add(navigation)
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.5))
+        // A short, slow drag must cancel and leave the detail screen usable.
+        edge.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.18, dy: 0.5)), withVelocity: .slow, thenHoldForDuration: 0.5)
+        XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 5))
+        app.segmentedControls.buttons["Animation"].tap()
+        XCTAssertTrue(app.buttons["Play Ember"].waitForExistence(timeout: 5))
+        for _ in 0..<2 {
+            edge.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)), withVelocity: .slow, thenHoldForDuration: 0.1)
+            XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForNonExistence(timeout: 5))
+            XCTAssertTrue(light.waitForExistence(timeout: 5))
+            XCTAssertTrue(app.buttons["Connect a light"].exists)
+            light.tap()
+            XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 5))
+        }
+        app.navigationBars["Library test"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(light.waitForExistence(timeout: 5))
+    }
+
+    func testGradientAndAnimationPreviews() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082"
+        app.launch()
+        let light = app.buttons["Library test"]
+        XCTAssertTrue(light.waitForExistence(timeout: 15))
+        let home = XCTAttachment(screenshot: app.screenshot()); home.name = "Home gradient"; home.lifetime = .keepAlways; add(home)
+        light.tap()
+        app.segmentedControls.buttons["Gradient"].tap()
+        let sunset = app.buttons["Apply Sunset"]
+        for _ in 0..<5 {
+            if sunset.isHittable { break }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.4)))
+        }
+        XCTAssertTrue(sunset.waitForExistence(timeout: 10)); sunset.tap()
+        XCTAssertTrue(sunset.waitForExistence(timeout: 5))
+        let gradient = XCTAttachment(screenshot: app.screenshot()); gradient.name = "Sunset header"; gradient.lifetime = .keepAlways; add(gradient)
+        app.segmentedControls.buttons["Animation"].tap()
+        let ember = app.buttons["Play Ember"]
+        XCTAssertTrue(ember.waitForExistence(timeout: 10)); ember.tap()
+        expectation(for: NSPredicate(format: "value == 'Playing'"), evaluatedWith: ember)
+        waitForExpectations(timeout: 10)
+        let animation = XCTAttachment(screenshot: app.screenshot()); animation.name = "Ember preview"; animation.lifetime = .keepAlways; add(animation)
+        app.navigationBars["Library test"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(light.waitForExistence(timeout: 5))
+        let card = XCTAttachment(screenshot: app.screenshot()); card.name = "Home animation preview"; card.lifetime = .keepAlways; add(card)
+    }
+
+    func testAnimationParameters() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/parameters"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        XCTAssertFalse(app.sliders["Speed"].exists)
+        let settings = app.buttons["Settings for Parameterized"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 10)); settings.tap()
+        let toggle = app.switches["Flicker"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10)); XCTAssertEqual(toggle.value as? String, "1")
+        toggle.tap()
+        expectation(for: NSPredicate(format: "value == '0'"), evaluatedWith: toggle); waitForExpectations(timeout: 10)
+        let speed = app.sliders["Speed"]
+        XCTAssertTrue(speed.waitForExistence(timeout: 5)); speed.adjust(toNormalizedSliderPosition: 0.75)
+        let spacing = app.textFields["Spacing"]
+        XCTAssertTrue(spacing.waitForExistence(timeout: 5))
+        spacing.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        spacing.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (spacing.value as? String ?? "").count) + "12")
+        app.keyboards.buttons["Done"].tap()
+        expectation(for: NSPredicate(format: "value == '12.0'"), evaluatedWith: spacing); waitForExpectations(timeout: 10)
+        XCTAssertFalse(app.buttons["Save parameters"].exists)
+        app.buttons["animation-settings-done"].tap()
+        XCTAssertTrue(spacing.waitForNonExistence(timeout: 5))
+        app.buttons["preset-Ember"].tap()
+        XCTAssertTrue(app.buttons["Settings for Ember"].waitForExistence(timeout: 10))
+        app.buttons["Play Parameterized"].tap()
+        XCTAssertTrue(settings.waitForExistence(timeout: 10)); settings.tap()
+        XCTAssertTrue(spacing.waitForExistence(timeout: 5)); XCTAssertEqual(spacing.value as? String, "12.0")
+        XCTAssertEqual(toggle.value as? String, "0")
+        app.buttons["Reset to Defaults"].tap()
+        expectation(for: NSPredicate(format: "value == '8.0'"), evaluatedWith: spacing); waitForExpectations(timeout: 10)
+        XCTAssertEqual(toggle.value as? String, "1")
+    }
+
+    func testAnimationOptionsExplainOldFirmware() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/old-animation"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        XCTAssertFalse(app.sliders["Speed"].exists)
+        XCTAssertFalse(app.buttons["Settings for Ember"].exists)
+        app.buttons["preset-Ember"].tap()
+        XCTAssertTrue(app.staticTexts["These animation presets require firmware build 21 or newer."].waitForExistence(timeout: 10))
+    }
+
+    func testSelectingOldPresetLoadsItsNewOptions() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/stale-animation"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        XCTAssertFalse(app.buttons["Settings for Ember"].exists)
+        app.buttons["preset-Ember"].tap()
+        XCTAssertTrue(app.buttons["Settings for Ember"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.sliders["Speed"].exists)
+        app.buttons["Settings for Ember"].tap()
+        XCTAssertTrue(app.sliders["Speed"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.textFields["Spacing"].exists)
+        XCTAssertTrue(app.switches["Pulse"].exists)
+    }
+
+    func testPresetSettingsPersistLocallyAndReset() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/options"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        app.segmentedControls.buttons["Animation"].tap()
+        let rainbow = app.buttons["preset-Rainbow"]
+        XCTAssertTrue(rainbow.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["Settings for Rainbow"].exists)
+        let collapsedWidth = rainbow.frame.width
+        let colorloop = app.buttons["preset-Colorloop"], aurora = app.buttons["preset-Aurora"]
+        let emberY = app.buttons["preset-Ember"].frame.minY
+        rainbow.tap()
+        let settings = app.buttons["Settings for Rainbow"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        XCTAssertGreaterThan(settings.frame.maxX - rainbow.frame.minX, collapsedWidth)
+        XCTAssertLessThanOrEqual(settings.frame.maxX - rainbow.frame.minX, collapsedWidth + 45)
+        XCTAssertLessThan(colorloop.frame.width, collapsedWidth)
+        XCTAssertLessThan(aurora.frame.width, collapsedWidth)
+        XCTAssertEqual(colorloop.frame.minY, rainbow.frame.minY, accuracy: 1)
+        XCTAssertEqual(aurora.frame.minY, rainbow.frame.minY, accuracy: 1)
+        XCTAssertEqual(app.buttons["preset-Ember"].frame.minY, emberY, accuracy: 1)
+        XCTAssertFalse(app.buttons["Settings for Colorloop"].exists)
+        XCTAssertFalse(app.sliders["Speed"].exists)
+        let card = XCTAttachment(screenshot: app.screenshot()); card.name = "Selected animation card"; card.lifetime = .keepAlways; add(card)
+        settings.tap()
+        let period = app.textFields["Period"]
+        XCTAssertTrue(period.waitForExistence(timeout: 5))
+        period.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        period.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (period.value as? String ?? "").count) + "12")
+        app.keyboards.buttons["Done"].tap()
+        expectation(for: NSPredicate(format: "value == '12.0'"), evaluatedWith: period); waitForExpectations(timeout: 10)
+        let reverse = app.switches["Reverse"]; reverse.tap()
+        expectation(for: NSPredicate(format: "value == '1'"), evaluatedWith: reverse); waitForExpectations(timeout: 10)
+        let popup = XCTAttachment(screenshot: app.screenshot()); popup.name = "Animation settings popup"; popup.lifetime = .keepAlways; add(popup)
+        app.buttons["animation-settings-done"].tap()
+        XCTAssertTrue(period.waitForNonExistence(timeout: 5))
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        app.buttons["preset-Colorloop"].tap()
+        XCTAssertTrue(app.buttons["Settings for Colorloop"].waitForExistence(timeout: 10))
+        XCTAssertFalse(settings.exists)
+        XCTAssertLessThan(rainbow.frame.width, collapsedWidth)
+        XCTAssertLessThan(aurora.frame.width, collapsedWidth)
+        XCTAssertEqual(aurora.frame.minY, colorloop.frame.minY, accuracy: 1)
+        rainbow.tap()
+        XCTAssertTrue(settings.waitForExistence(timeout: 10)); settings.tap()
+        XCTAssertTrue(period.waitForExistence(timeout: 5)); XCTAssertEqual(period.value as? String, "12.0")
+        XCTAssertEqual(reverse.value as? String, "1")
+        app.buttons["Reset to Defaults"].tap()
+        expectation(for: NSPredicate(format: "value == '20.0'"), evaluatedWith: period); waitForExpectations(timeout: 10)
+        XCTAssertEqual(reverse.value as? String, "0")
+        app.buttons["animation-settings-done"].tap()
+        app.buttons["preset-Colorloop"].tap()
+        XCTAssertTrue(app.buttons["Settings for Colorloop"].waitForExistence(timeout: 10)); rainbow.tap()
+        XCTAssertTrue(settings.waitForExistence(timeout: 10)); settings.tap()
+        XCTAssertTrue(period.waitForExistence(timeout: 5)); XCTAssertEqual(period.value as? String, "20.0")
+        XCTAssertEqual(reverse.value as? String, "0")
+    }
+
+    func testAutomaticAnimationPresets() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/options"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        app.segmentedControls.buttons["Animation"].tap()
+        app.buttons["preset-Rainbow"].tap()
+        XCTAssertTrue(app.buttons["Settings for Rainbow"].waitForExistence(timeout: 10))
+        for name in ["Christmas", "Knight Rider", "Fireplace", "Candle", "Cyberpunk"] {
+            let card = app.buttons["preset-\(name)"]
+            for _ in 0..<4 {
+                if card.isHittable { break }
+                app.swipeUp()
+            }
+            XCTAssertTrue(card.isHittable); card.tap()
+            expectation(for: NSPredicate(format: "value == 'Playing'"), evaluatedWith: card); waitForExpectations(timeout: 10)
+            XCTAssertFalse(app.buttons["Settings for Rainbow"].exists)
+            XCTAssertFalse(app.buttons["Settings for \(name)"].exists)
+        }
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "New animation presets"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
+    func testSaveApplyAndDeleteGradient() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082"
+        app.launch()
+        let light = app.buttons["Library test"]
+        XCTAssertTrue(light.waitForExistence(timeout: 15)); light.tap()
+        let gradient = app.segmentedControls.buttons["Gradient"]
+        XCTAssertTrue(gradient.waitForExistence(timeout: 10)); gradient.tap()
+        let save = app.buttons["save-preset"]
+        let addPoint = app.buttons["Add point"]
+        if !addPoint.isHittable {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.6)))
+        }
+        XCTAssertTrue(addPoint.waitForExistence(timeout: 5)); addPoint.tap()
+        XCTAssertTrue(app.buttons["Select point 3"].waitForExistence(timeout: 5))
+        let controls = XCTAttachment(screenshot: app.screenshot()); controls.name = "Gradient controls"; controls.lifetime = .keepAlways; add(controls)
+        for _ in 0..<50 {
+            if save.exists && save.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(save.isHittable); save.tap()
+        let alert = app.alerts["Save Gradient"]
         XCTAssertTrue(alert.waitForExistence(timeout: 5))
         alert.textFields.firstMatch.tap(); alert.textFields.firstMatch.typeText("Evening sea")
         alert.buttons["Save"].tap()
         let search = app.textFields["Search saved items"]
-        for _ in 0..<6 { if search.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(search.waitForExistence(timeout: 10)); search.tap(); search.typeText("Evening sea")
-        let play = app.buttons["Play Evening sea"]
-        XCTAssertTrue(play.waitForExistence(timeout: 10))
-        if !play.isHittable { app.swipeUp() }
+        for _ in 0..<50 {
+            if search.isHittable { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(search.waitForExistence(timeout: 10)); search.tap(); search.typeText("Evening sea\n")
+        let apply = app.buttons["Apply Evening sea"]
+        XCTAssertTrue(apply.waitForExistence(timeout: 10))
+        if !apply.isHittable { app.swipeUp() }
         let saved = XCTAttachment(screenshot: app.screenshot()); saved.name = "Saved gradient library"; saved.lifetime = .keepAlways; add(saved)
-        play.tap()
-        let stop = app.buttons["Stop Evening sea"]
-        XCTAssertTrue(stop.waitForExistence(timeout: 10))
-        stop.press(forDuration: 1)
+        apply.tap()
+        expectation(for: NSPredicate(format: "value == 'Selected'"), evaluatedWith: apply); waitForExpectations(timeout: 10)
+        apply.tap()
+        expectation(for: NSPredicate(format: "value == 'Selected'"), evaluatedWith: apply); waitForExpectations(timeout: 10)
+        XCTAssertFalse(app.buttons["Stop Evening sea"].exists)
+        apply.press(forDuration: 1)
         app.buttons["Delete"].tap()
         let deletion = app.alerts["Delete saved item?"]
         XCTAssertTrue(deletion.waitForExistence(timeout: 5)); deletion.buttons["Delete"].tap()
-        XCTAssertTrue(play.waitForNonExistence(timeout: 10))
-        XCTAssertTrue(stop.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(apply.waitForNonExistence(timeout: 10))
     }
+    func testSaveApplyAndDeleteColor() throws {
+        let app = XCUIApplication(); app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082"; app.launch()
+        let light = app.buttons["Library test"]; XCTAssertTrue(light.waitForExistence(timeout: 15)); light.tap()
+        let color = app.segmentedControls.buttons["Color"]; XCTAssertTrue(color.waitForExistence(timeout: 10)); color.tap()
+        let save = app.buttons["save-preset"]
+        for _ in 0..<15 { if save.exists && save.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(save.isHittable); save.tap()
+        let alert = app.alerts["Save Color"]; XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.textFields.firstMatch.tap(); alert.textFields.firstMatch.typeText("Evening blue"); alert.buttons["Save"].tap()
+        let apply = app.buttons["Apply Evening blue"]
+        for _ in 0..<6 {
+            if apply.isHittable { break }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.3)))
+        }
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Saved color library"; screenshot.lifetime = .keepAlways; add(screenshot)
+        XCTAssertTrue(apply.waitForExistence(timeout: 10)); apply.tap(); apply.press(forDuration: 1)
+        let deletion = app.alerts["Delete saved item?"]
+        for _ in 0..<3 {
+            if deletion.exists { break }
+            let remove = app.buttons["Delete"]; XCTAssertTrue(remove.waitForExistence(timeout: 5)); remove.tap()
+            if deletion.waitForExistence(timeout: 2) { break }
+        }
+        XCTAssertTrue(deletion.exists); deletion.buttons["Delete"].tap()
+        XCTAssertTrue(apply.waitForNonExistence(timeout: 10))
+    }
+
+    func testStripCapabilities() throws {
+        for (path, gradient, white, temperature) in [("rgb-single", false, false, false), ("rgbw-single", false, true, false), ("rgbcct-two", true, false, true)] {
+            let app = XCUIApplication(); app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/\(path)"; app.launch()
+            let light = app.buttons["Library test"]; XCTAssertTrue(light.waitForExistence(timeout: 15)); light.tap()
+            XCTAssertTrue(app.segmentedControls.buttons["Color"].waitForExistence(timeout: 10))
+            XCTAssertEqual(app.segmentedControls.buttons["Gradient"].exists, gradient)
+            XCTAssertEqual(app.buttons["White channel"].exists, white)
+            XCTAssertEqual(app.buttons["White temperature wheel"].exists, temperature)
+            if white {
+                app.buttons["White channel"].tap()
+                XCTAssertEqual(app.otherElements["Color point 1"].value as? String, "White channel")
+            }
+            app.terminate()
+        }
+    }
+
 }

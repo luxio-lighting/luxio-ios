@@ -41,6 +41,10 @@ static int pixel_count(lua_State *L) {
     LuxioAnimation *a = *(LuxioAnimation **)lua_getextraspace(L);
     lua_pushinteger(L, a->count); return 1;
 }
+static int color_type(lua_State *L) {
+    LuxioAnimation *a = *(LuxioAnimation **)lua_getextraspace(L);
+    lua_pushstring(L, a->strip == 2805 ? "RGBCCT" : a->strip == 2814 ? "RGBW" : "RGB"); return 1;
+}
 static int milliseconds(lua_State *L) {
     LuxioAnimation *a = *(LuxioAnimation **)lua_getextraspace(L);
     lua_pushinteger(L, a->elapsed); return 1;
@@ -79,6 +83,7 @@ static int initialize(lua_State *L) {
     const char *blocked[] = { "dofile", "loadfile", "load", "collectgarbage", "print" };
     for (int i = 0; i < 5; i++) { lua_pushnil(L); lua_setglobal(L, blocked[i]); }
     lua_pushcfunction(L, pixel_count); lua_setglobal(L, "luxio_get_pixel_count");
+    lua_pushcfunction(L, color_type); lua_setglobal(L, "luxio_get_color_type");
     lua_pushcfunction(L, milliseconds); lua_setglobal(L, "luxio_millis");
     lua_pushcfunction(L, parameter); lua_setglobal(L, "luxio_get_parameter");
     lua_pushcfunction(L, set_pixel); lua_setglobal(L, "luxio_set_pixel_color");

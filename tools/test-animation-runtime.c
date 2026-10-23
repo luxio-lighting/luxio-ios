@@ -35,6 +35,24 @@ int main(void) {
     a = luxio_animation_create(1, 2814); assert(a);
     assert(luxio_animation_start(a, "function loop() luxio_set_pixel_color(0,0,0,0,255) end"));
     assert(luxio_animation_frame(a, 33)[3] == 255); luxio_animation_destroy(a);
+    int strips[] = {2812, 2814, 2805};
+    int counts[] = {1, 60, 1024};
+    const uint8_t expected[][6] = {{255,190,105,0,0,0}, {0,0,0,255,0,0}, {0,0,0,0,180,75}};
+    for (int strip = 0; strip < 3; strip++) for (int count = 0; count < 3; count++) {
+        a = luxio_animation_create(counts[count], strips[strip]); assert(a);
+        assert(luxio_animation_start(a,
+            "local kind = luxio_get_color_type()\n"
+            "function setup() assert(luxio_get_color_type()==kind) end\n"
+            "function loop() assert(luxio_get_color_type()==kind) for i=0,luxio_get_pixel_count()-1 do "
+            "if kind=='RGBCCT' then luxio_set_pixel_color(i,0,0,0,0,180,75) "
+            "elseif kind=='RGBW' then luxio_set_pixel_color(i,0,0,0,255) "
+            "elseif kind=='RGB' then luxio_set_pixel_color(i,255,190,105) else error('Unknown color type') end end end"));
+        for (int frame = 0; frame < 3; frame++) {
+            pixels = luxio_animation_frame(a, frame * 33); assert(pixels);
+            for (int pixel = 0; pixel < counts[count]; pixel++) assert(!memcmp(pixels + pixel * 6, expected[strip], 6));
+        }
+        luxio_animation_destroy(a);
+    }
     assert(!luxio_animation_create(0, 2805)); assert(!luxio_animation_create(1025, 2805));
-    puts("PASS: pixel output, timing, live parameters, RGBW, sandbox, memory and instruction limits");
+    puts("PASS: pixel output, timing, live parameters, color capabilities, sandbox, memory and instruction limits");
 }

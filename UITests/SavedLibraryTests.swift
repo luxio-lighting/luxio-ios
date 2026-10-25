@@ -503,7 +503,7 @@ final class SavedLibraryTests: XCTestCase {
         check.tap()
         XCTAssertTrue(app.buttons["update-install"].waitForExistence(timeout: 10)); app.buttons["update-install"].tap()
         XCTAssertTrue(app.staticTexts["Firmware signature verification failed"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.links["Open Recovery"].exists)
+        XCTAssertTrue(app.links["Open Recovery"].isHittable)
         XCTAssertFalse(app.buttons["update-done"].exists)
         XCTAssertTrue(app.buttons["update-close"].exists)
         let failure = XCTAttachment(screenshot: app.screenshot()); failure.name = "Update failure sheet"; failure.lifetime = .keepAlways; add(failure)

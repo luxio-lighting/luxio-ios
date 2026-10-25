@@ -917,6 +917,8 @@ struct FirmwareUpdateView: View {
                 }
             }
         }
+        .presentationDetents(error == nil ? [.medium, .large] : [.large])
+        .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(installing)
         .task(id: installing) {
             guard installing else { return }
@@ -1201,7 +1203,6 @@ struct SettingsView: View {
             if (client.state?.build ?? 0) >= availableBuild { availableBuild = 0 }
         }) {
             FirmwareUpdateView(client: client, build: availableBuild, installing: $installing)
-                .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
         }.task {
             await client.refresh()
             if let state = client.state { name = state.name; strip = state.strip; count = String(state.count); gpio = String(state.gpio); relayEnabled = state.relayEnabled; relayGPIO = String(state.relayGPIO); relayInverted = state.relayInverted; wifiEnabled = state.wifiEnabled; matterEnabled = state.matterEnabled }

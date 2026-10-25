@@ -25,7 +25,6 @@ extension LightState {
 struct LightsView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var discovery = Discovery()
-    @State private var manual = ""
     @State private var showAdd = false
     @State private var selectedLight: Light?
     @State private var powerStates: [String: Bool] = [:]
@@ -99,11 +98,9 @@ struct LightsView: View {
                     .toolbarTitleDisplayMode(.inlineLarge)
                     .toolbar(.visible, for: .navigationBar)
                     .toolbar {
-                        if !discovery.lights.isEmpty {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button { showAdd = true } label: { Image(systemName: "plus") }.tint(.white)
-                                    .accessibilityLabel("Connect Luxio")
-                            }
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button { showAdd = true } label: { Image(systemName: "plus") }.tint(.white)
+                                .accessibilityLabel("Add Device").accessibilityIdentifier("add-luxio")
                         }
                     }
                     .background(backdrop.ignoresSafeArea())
@@ -116,14 +113,108 @@ struct LightsView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in discovery.setBluetoothActive(phase == .active) }
-        .alert("Connect to Luxio", isPresented: $showAdd) {
-            TextField("192.168.1.42", text: $manual).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
-            Button("Connect") {
-                let address = manual.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !address.isEmpty { Task { await discovery.add(Light(deviceId: address, name: "Luxio", lan_ip: address)) } }
+        .sheet(isPresented: $showAdd) {
+            AddLuxioView(discovery: discovery) { light in
+                showAdd = false; selectedLight = light
             }
-            Button("Cancel", role: .cancel) {}
-        } message: { Text("Enter its local IP address or hostname.") }
+        }
+    }
+}
+
+struct AddLuxioView: View {
+    @ObservedObject var discovery: Discovery
+    var onAdded: (Light) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var address = ""
+    @State private var connecting = false
+    @State private var addingVirtual = false
+    @State private var error: String?
+    @FocusState private var addressFocused: Bool
+
+    var body: some View {
+        let host = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(spacing: 16) {
+                        Image(systemName: "lightbulb.led.fill")
+                            .font(.system(size: 42, weight: .medium)).foregroundStyle(Color.accentColor)
+                            .accessibilityHidden(true)
+                        VStack(spacing: 8) {
+                            Text("Create your own Luxio").font(.title2.bold())
+                            Text("Turn an ESP32 and an LED strip into your own smart light. Our guide will help you get started.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Link(destination: URL(string: "https://luxio.lighting/")!) {
+                            HStack {
+                                Text("View the Guide").fontWeight(.semibold)
+                                Image(systemName: "arrow.up.right").font(.subheadline.weight(.semibold))
+                            }.frame(maxWidth: .infinity).padding(.vertical, 5)
+                        }.buttonStyle(.borderedProminent).controlSize(.large)
+                            .accessibilityIdentifier("add-luxio-guide")
+                    }.multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.vertical, 12)
+                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+
+                Section {
+                    TextField("192.168.1.42", text: $address)
+                        .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .focused($addressFocused).submitLabel(.go)
+                        .accessibilityLabel("IP address").accessibilityIdentifier("add-luxio-address")
+                        .onSubmit { if !host.isEmpty && !connecting { addressFocused = false; connecting = true } }
+                    Button {
+                        addressFocused = false; connecting = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            if connecting { ProgressView() }
+                            Text(connecting ? "Connecting…" : "Connect")
+                            Spacer()
+                            if !connecting { Image(systemName: "arrow.right") }
+                        }.padding(.vertical, 4)
+                    }.disabled(host.isEmpty || connecting || addingVirtual).accessibilityIdentifier("add-luxio-connect")
+                    if let error {
+                        Label(error, systemImage: "exclamationmark.circle")
+                            .font(.subheadline).foregroundStyle(.red).accessibilityIdentifier("add-luxio-error")
+                    }
+                } header: { Text("Connect by IP address") } footer: {
+                    Text("Already have a Luxio? Enter its IP address or hostname. Connect your iPhone to the same Wi-Fi network.")
+                }
+                Section {
+                    Button {
+                        addressFocused = false; addingVirtual = true
+                    } label: {
+                        Text("Add a virtual device").font(.footnote).underline().foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity).padding(.vertical, 4)
+                    }.buttonStyle(.plain).accessibilityIdentifier("add-luxio-virtual")
+                }.listRowBackground(Color.clear)
+            }
+            .navigationTitle("Add Luxio").navigationBarTitleDisplayMode(.inline)
+            .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { dismiss() }.disabled(connecting || addingVirtual)
+                }
+            }
+            .disabled(connecting || addingVirtual)
+        }
+        .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled(connecting || addingVirtual)
+        .onChange(of: address) { _, _ in error = nil }
+        .task(id: connecting) {
+            guard connecting else { return }
+            defer { connecting = false }
+            error = nil
+            await discovery.add(Light(deviceId: host, name: "Luxio", lan_ip: host))
+            guard !Task.isCancelled else { return }
+            if let light = discovery.lights.first(where: { $0.lan_ip == host }) { onAdded(light) }
+            else { error = "Couldn't connect. Check the address and make sure Luxio is powered on and on the same Wi-Fi network." }
+        }
+        .task(id: addingVirtual) {
+            guard addingVirtual else { return }
+            let light = await discovery.addSimulator()
+            if !Task.isCancelled { onAdded(light) }
+            addingVirtual = false
+        }
     }
 }
 

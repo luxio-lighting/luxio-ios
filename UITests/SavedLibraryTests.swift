@@ -1,6 +1,44 @@
 import XCTest
 
 final class SavedLibraryTests: XCTestCase {
+    func testAddLuxioSheetAndVirtualDevice() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/settings"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["add-luxio"].tap()
+        XCTAssertTrue(app.staticTexts["Create your own Luxio"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.links["add-luxio-guide"].isHittable)
+        XCTAssertFalse(app.buttons["add-luxio-connect"].isEnabled)
+        XCTAssertTrue(app.buttons["add-luxio-virtual"].isHittable)
+        let sheet = XCTAttachment(screenshot: app.screenshot()); sheet.name = "Add Luxio sheet"; sheet.lifetime = .keepAlways; add(sheet)
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["add-luxio"].waitForExistence(timeout: 5)); app.buttons["add-luxio"].tap()
+        app.buttons["add-luxio-virtual"].tap()
+        XCTAssertTrue(app.staticTexts["device-title"].waitForExistence(timeout: 8))
+        XCTAssertEqual(app.staticTexts["device-title"].label, "Luxio Simulator")
+        XCTAssertFalse(app.textFields["add-luxio-address"].exists)
+    }
+
+    func testAddLuxioByAddressAndRetry() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/unreachable"
+        app.launch()
+        XCTAssertTrue(app.buttons["add-luxio"].waitForExistence(timeout: 10)); app.buttons["add-luxio"].tap()
+        let address = app.textFields["add-luxio-address"]
+        XCTAssertTrue(address.waitForExistence(timeout: 5)); address.tap(); address.typeText("127.0.0.1:1")
+        app.buttons["add-luxio-connect"].tap()
+        XCTAssertTrue(app.staticTexts["Couldn't connect. Check the address and make sure Luxio is powered on and on the same Wi-Fi network."].waitForExistence(timeout: 10))
+        XCTAssertEqual(address.value as? String, "127.0.0.1:1")
+        address.tap(); address.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 11) + "127.0.0.1:8082")
+        app.buttons["add-luxio-connect"].tap()
+        XCTAssertTrue(app.staticTexts["device-title"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["device-title"].label, "Library test")
+        XCTAssertFalse(address.exists)
+    }
+
     func testDeviceHeaderNameRemainsVisible() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-luxio.simulator.enabled", "NO"]
@@ -218,7 +256,7 @@ final class SavedLibraryTests: XCTestCase {
         XCTAssertFalse(app.buttons["Library test"].exists)
         XCTAssertFalse(app.otherElements["light-skeleton-0"].exists)
         XCTAssertTrue(app.buttons["Add Luxio"].exists)
-        XCTAssertFalse(app.buttons["Connect Luxio"].exists)
+        XCTAssertTrue(app.buttons["add-luxio"].exists)
         XCTAssertFalse(app.staticTexts["Pull down to search again."].exists)
         let empty = XCTAttachment(screenshot: app.screenshot())
         empty.name = "No reachable lights"; empty.lifetime = .keepAlways; add(empty)

@@ -1,6 +1,7 @@
 import Foundation
 
 final class RefreshProtocol: URLProtocol {
+    static var animationError = ""
     static var failure: Error? = URLError(.cancelled)
     override class func canInit(with request: URLRequest) -> Bool { request.url?.host == "luxio-refresh.test" }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -19,6 +20,8 @@ final class RefreshProtocol: URLProtocol {
             }
             let input = try Proto.decode(body)
             var response = Proto(); response.uint(1, UInt64(input.number(1)))
+            var state = Proto(); state.uint(2, 35); response.data(3, state.bytes)
+            response.string(22, Self.animationError)
             client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: response.bytes)
             client?.urlProtocolDidFinishLoading(self)
@@ -56,6 +59,14 @@ final class RefreshProtocol: URLProtocol {
         RefreshProtocol.failure = nil
         await client.refresh()
         precondition(client.error == nil, "Successful refresh must clear the previous error")
+        RefreshProtocol.animationError = "Animation exceeded its instruction limit"
+        await client.refresh()
+        precondition(client.error == nil && client.animationError == RefreshProtocol.animationError, "Runtime errors must survive successful state refreshes")
+        await client.refresh()
+        precondition(client.animationError == RefreshProtocol.animationError, "Polling must not hide an animation failure")
+        RefreshProtocol.animationError = ""
+        await client.refresh()
+        precondition(client.animationError == nil, "A cleared firmware error must disappear")
         print("PASS: refresh ignores task and URL cancellation, preserves real failures, and clears errors on success")
     }
 }

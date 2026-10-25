@@ -42,7 +42,13 @@ struct LiveLightBackdrop: View {
         let key = visible && scenePhase == .active && !reduceMotion && state?.on == true && state?.mode == 2
             ? "\(state?.animationRevision ?? 0)-\(state?.activeScript ?? "")-\(state?.scriptName ?? "")-\(state?.count ?? 0)-\(state?.strip ?? "")" : ""
         let live = !key.isEmpty && renderedKey == key && !pixels.isEmpty
-        LightBackdrop(channels: state?.on == true ? (live ? pixels : state?.previewChannels ?? []) : [], duration: live ? 0 : 0.4)
+        ZStack {
+            LightBackdrop(channels: [])
+            LightBackdrop(channels: live ? pixels : state?.previewChannels ?? [], duration: live ? 0 : 0.4)
+                // Live frames update without interpolation; power fades outside that transaction.
+                .opacity(state?.on == true ? 1 : 0)
+                .animation(.smooth(duration: 0.35), value: state?.on)
+        }
             .onAppear { visible = true }
             .onDisappear { visible = false }
             .task(id: key) {

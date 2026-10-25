@@ -53,7 +53,7 @@ struct GradientPoint: Identifiable, Codable, Equatable {
                 let cool = Int((temperature * 255).rounded())
                 return [0, 0, 0, 0, 255 - cool, cool]
             }
-            if strip == "WS2814" { return [0, 0, 0, 255, 0, 0] }
+            if (strip == "WS2814" || strip == "SK6812") { return [0, 0, 0, 255, 0, 0] }
         }
         let h = hue * 6, sector = Int(h) % 6, fraction = h - floor(h)
         let low = 1 - saturation, down = 1 - fraction * saturation, up = 1 - (1 - fraction) * saturation

@@ -13,15 +13,18 @@
 		0DA355B2D5FEC5A0E1999D84 /* lzio.c in Sources */ = {isa = PBXBuildFile; fileRef = 73AA1B08043F6B3C93A2B28D /* lzio.c */; };
 		12C9140935C52CB03BBEF1F8 /* LICENSE.html in Resources */ = {isa = PBXBuildFile; fileRef = 337DD7D249A19D6706527B4B /* LICENSE.html */; };
 		1459CBA74F6A2CC5C33E6DF1 /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7185ABA55ABF001F566F64A6 /* Protocol.swift */; };
+		165F0C95803679DDACC1FF38 /* SimulatorDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3E574010053D95C1F3222A1 /* SimulatorDevice.swift */; };
 		1ABF47BAA295DB5D7E4B0485 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */; };
 		1D6B8396CD58CFA8DCAF5E77 /* lstrlib.c in Sources */ = {isa = PBXBuildFile; fileRef = DAD03CD68732ECBDC89BBA92 /* lstrlib.c */; };
 		1F386099C19EA3EFDCFFD1EB /* lobject.c in Sources */ = {isa = PBXBuildFile; fileRef = 970C1014473A014B35A4BFD2 /* lobject.c */; };
 		26CB2EBEAE0CD6CBE438D573 /* lstate.c in Sources */ = {isa = PBXBuildFile; fileRef = 03C4D9106A4B56D18B525E11 /* lstate.c */; };
 		282A48F0FB9B3FAC8002A5CD /* ColorEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD59EC634E5BEDF0BBE9E173 /* ColorEditor.swift */; };
 		294B4E22D18DFCE070FC3194 /* lundump.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DEECC249416E5C1427DB4F /* lundump.c */; };
+		2960BADBC2F09B60260AC900 /* Discovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A671048A15F2EB8C8025B839 /* Discovery.swift */; };
 		2CB5B27B6685EF59D4B441AD /* SavedLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44EFDE9FE4CCB35799C69816 /* SavedLibraryTests.swift */; };
 		2D1023F1A0FBB575F01D0EF0 /* Gradient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D384970AE45BE4C62255BCC /* Gradient.swift */; };
 		4E431FBE7B73E71C181675DC /* lfunc.c in Sources */ = {isa = PBXBuildFile; fileRef = AAD755C5E65508CDF632675C /* lfunc.c */; };
+		57391BF2A3D605A1C09D81A1 /* Bluetooth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47D9191D2C4CC72C85838517 /* Bluetooth.swift */; };
 		5B660AD1EAA416495EC2AD44 /* LuxioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE14CC964F0ECC58ECE028CE /* LuxioApp.swift */; };
 		5FD35811315C5B0ED85D809A /* ltablib.c in Sources */ = {isa = PBXBuildFile; fileRef = 07BA2A12950E6B9F207E380B /* ltablib.c */; };
 		67A758A8165EB5CB3BAB217E /* ldo.c in Sources */ = {isa = PBXBuildFile; fileRef = C25E3831989A1704764BFE7F /* ldo.c */; };
@@ -43,6 +46,7 @@
 		D585CA0007C9658AD4EB7526 /* AnimationPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6BFB4E4E04A6858BBE209B5 /* AnimationPreview.swift */; };
 		DA247BF8AB7425CBEBA290BB /* ltm.c in Sources */ = {isa = PBXBuildFile; fileRef = 75E1493B1CA2E47B75AC7B1E /* ltm.c */; };
 		E27D2EDCD8F2B1DAB616E682 /* lvm.c in Sources */ = {isa = PBXBuildFile; fileRef = E29BFB02248C3182A94FC221 /* lvm.c */; };
+		F8C4D300B580B19E263D7A5E /* WifiSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8940B919CF97169F6785E3 /* WifiSetupView.swift */; };
 		FDC804FC549A350AC423EBFB /* lctype.c in Sources */ = {isa = PBXBuildFile; fileRef = E252CEA7636BC03A28501BCB /* lctype.c */; };
 		FEB78047D465A3E4C3EA1008 /* lmathlib.c in Sources */ = {isa = PBXBuildFile; fileRef = 004F9E6537B53A1C5CA65C2D /* lmathlib.c */; };
 /* End PBXBuildFile section */
@@ -73,6 +77,7 @@
 		3D384970AE45BE4C62255BCC /* Gradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gradient.swift; sourceTree = "<group>"; };
 		44D20D7244AE7BCE58E0F49C /* ltm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ltm.h; sourceTree = "<group>"; };
 		44EFDE9FE4CCB35799C69816 /* SavedLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedLibraryTests.swift; sourceTree = "<group>"; };
+		47D9191D2C4CC72C85838517 /* Bluetooth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bluetooth.swift; sourceTree = "<group>"; };
 		491241641FE806179B2BC17B /* lmem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lmem.h; sourceTree = "<group>"; };
 		49A3E5C29041B2B0B3B28C1C /* ljumptab.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ljumptab.h; sourceTree = "<group>"; };
 		4EE737DC7DD93D7688E41EAC /* lgc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lgc.c; sourceTree = "<group>"; };
@@ -90,6 +95,7 @@
 		71D3EC4B8944A1937520E470 /* InteractiveBackGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveBackGesture.swift; sourceTree = "<group>"; };
 		73AA1B08043F6B3C93A2B28D /* lzio.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lzio.c; sourceTree = "<group>"; };
 		75E1493B1CA2E47B75AC7B1E /* ltm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ltm.c; sourceTree = "<group>"; };
+		7B8940B919CF97169F6785E3 /* WifiSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WifiSetupView.swift; sourceTree = "<group>"; };
 		7FCF008406898768FAF633EE /* ldebug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ldebug.h; sourceTree = "<group>"; };
 		81EF157F91147A7CC565BB23 /* lbaselib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lbaselib.c; sourceTree = "<group>"; };
 		8465161F1923299B6EF019C0 /* LuxioUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LuxioUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -99,6 +105,7 @@
 		92FE1F1D96549875B65C54EF /* lcode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lcode.h; sourceTree = "<group>"; };
 		970C1014473A014B35A4BFD2 /* lobject.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lobject.c; sourceTree = "<group>"; };
 		A1DEECC249416E5C1427DB4F /* lundump.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lundump.c; sourceTree = "<group>"; };
+		A671048A15F2EB8C8025B839 /* Discovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Discovery.swift; sourceTree = "<group>"; };
 		A6ABE42E45D030477011F6B8 /* lctype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lctype.h; sourceTree = "<group>"; };
 		A7118CDBF2004547D812A010 /* lstate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lstate.h; sourceTree = "<group>"; };
 		AAD755C5E65508CDF632675C /* lfunc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lfunc.c; sourceTree = "<group>"; };
@@ -122,6 +129,7 @@
 		DD766089465B1C23628958D0 /* ldo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ldo.h; sourceTree = "<group>"; };
 		E252CEA7636BC03A28501BCB /* lctype.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lctype.c; sourceTree = "<group>"; };
 		E29BFB02248C3182A94FC221 /* lvm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lvm.c; sourceTree = "<group>"; };
+		E3E574010053D95C1F3222A1 /* SimulatorDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorDevice.swift; sourceTree = "<group>"; };
 		E440294F48A72C5AD83EB7FE /* ldump.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ldump.c; sourceTree = "<group>"; };
 		EA3A358B6F302716C63DB055 /* lvm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lvm.h; sourceTree = "<group>"; };
 		F1106A6A5D3F9B2E2FF81B2F /* lauxlib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lauxlib.c; sourceTree = "<group>"; };
@@ -233,7 +241,9 @@
 			children = (
 				C6BFB4E4E04A6858BBE209B5 /* AnimationPreview.swift */,
 				2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */,
+				47D9191D2C4CC72C85838517 /* Bluetooth.swift */,
 				DD59EC634E5BEDF0BBE9E173 /* ColorEditor.swift */,
+				A671048A15F2EB8C8025B839 /* Discovery.swift */,
 				3D384970AE45BE4C62255BCC /* Gradient.swift */,
 				70C3FF76E6EE50132A56856C /* Info.plist */,
 				71D3EC4B8944A1937520E470 /* InteractiveBackGesture.swift */,
@@ -242,6 +252,8 @@
 				FE14CC964F0ECC58ECE028CE /* LuxioApp.swift */,
 				D8AE88F9C29F6942AD9A999B /* Presets.swift */,
 				7185ABA55ABF001F566F64A6 /* Protocol.swift */,
+				E3E574010053D95C1F3222A1 /* SimulatorDevice.swift */,
+				7B8940B919CF97169F6785E3 /* WifiSetupView.swift */,
 				2A8A48E1D35C8F4C7EFA9188 /* Native */,
 			);
 			path = Luxio;
@@ -351,13 +363,17 @@
 			files = (
 				D585CA0007C9658AD4EB7526 /* AnimationPreview.swift in Sources */,
 				ACD6933146FFA0786F6D533E /* AnimationRuntime.c in Sources */,
+				57391BF2A3D605A1C09D81A1 /* Bluetooth.swift in Sources */,
 				282A48F0FB9B3FAC8002A5CD /* ColorEditor.swift in Sources */,
+				2960BADBC2F09B60260AC900 /* Discovery.swift in Sources */,
 				2D1023F1A0FBB575F01D0EF0 /* Gradient.swift in Sources */,
 				D50B8F40A79E10843F9933B1 /* InteractiveBackGesture.swift in Sources */,
 				94132D346A42EFC2778DF78B /* LightPalette.swift in Sources */,
 				5B660AD1EAA416495EC2AD44 /* LuxioApp.swift in Sources */,
 				A6AA7DB9D8F06F2E4D165AB9 /* Presets.swift in Sources */,
 				1459CBA74F6A2CC5C33E6DF1 /* Protocol.swift in Sources */,
+				165F0C95803679DDACC1FF38 /* SimulatorDevice.swift in Sources */,
+				F8C4D300B580B19E263D7A5E /* WifiSetupView.swift in Sources */,
 				A4660D4C992C5A0435F56C97 /* lapi.c in Sources */,
 				D234FDDDD6663922651CDA54 /* lauxlib.c in Sources */,
 				043C4A54A7DF441E89D07857 /* lbaselib.c in Sources */,
@@ -472,13 +488,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 45;
+				CURRENT_PROJECT_VERSION = 52;
 				INFOPLIST_FILE = Luxio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.44;
+				MARKETING_VERSION = 0.1.51;
 				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.app;
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "Luxio/Luxio-Bridging-Header.h";
@@ -508,13 +524,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 45;
+				CURRENT_PROJECT_VERSION = 52;
 				INFOPLIST_FILE = Luxio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.44;
+				MARKETING_VERSION = 0.1.51;
 				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.app;
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "Luxio/Luxio-Bridging-Header.h";

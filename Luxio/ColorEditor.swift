@@ -71,29 +71,31 @@ struct ColorControls: View {
     var body: some View {
         let selected = editor.points.firstIndex { $0.id == editor.selected } ?? 0
         let white = editor.points[selected].white
-        let colors = editor.points.map { $0.white && editor.strip == "WS2814" ? Color.white : $0.preview }
+        let colors = editor.points.map { $0.white && (editor.strip == "WS2814" || editor.strip == "SK6812") ? Color.white : $0.preview }
         VStack(spacing: 22) {
                 ColorWheel(editor: editor).frame(maxWidth: 420).padding(.horizontal, 22).disabled(editor.loading || editor.loadFailed || client.state == nil)
-                HStack {
-                    HStack(spacing: 6) {
-                        Button {
-                            editor.points[selected].originalChannels = nil; editor.points[selected].white = false; editor.apply()
-                        } label: {
-                            Circle().fill(AngularGradient(colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red], center: .center)).frame(width: 28, height: 28)
-                                .padding(6).overlay { Circle().strokeBorder(white ? .clear : .white, lineWidth: 2) }
-                        }.accessibilityLabel("Color wheel").accessibilityAddTraits(!white ? .isSelected : [])
-                        if editor.strip == "WS2805" || editor.strip == "WS2814" {
+                if client.state?.supportsWhite == true || client.state?.supportsWhiteTemperature == true {
+                    HStack {
+                        HStack(spacing: 6) {
                             Button {
-                                editor.points[selected].originalChannels = nil; editor.points[selected].white = true; editor.apply()
+                                editor.points[selected].originalChannels = nil; editor.points[selected].white = false; editor.apply()
                             } label: {
-                                Circle().fill(LinearGradient(colors: editor.strip == "WS2814" ? [.white, .white] : [Color(red: 1, green: 0.73, blue: 0.3), .white, .cyan.opacity(0.6)], startPoint: .top, endPoint: .bottom)).frame(width: 28, height: 28)
-                                    .padding(6).overlay { Circle().strokeBorder(white ? .white : .clear, lineWidth: 2) }
-                            }.accessibilityLabel(editor.strip == "WS2805" ? "White temperature wheel" : "White channel").accessibilityAddTraits(white ? .isSelected : [])
-                        }
-                    }.padding(5).background(.white.opacity(0.1), in: Capsule())
-                    Spacer()
+                                Circle().fill(AngularGradient(colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red], center: .center)).frame(width: 28, height: 28)
+                                    .padding(6).overlay { Circle().strokeBorder(white ? .clear : .white, lineWidth: 2) }
+                            }.accessibilityLabel("Color wheel").accessibilityAddTraits(!white ? .isSelected : [])
+                            if editor.strip == "WS2805" || (editor.strip == "WS2814" || editor.strip == "SK6812") {
+                                Button {
+                                    editor.points[selected].originalChannels = nil; editor.points[selected].white = true; editor.apply()
+                                } label: {
+                                    Circle().fill(LinearGradient(colors: (editor.strip == "WS2814" || editor.strip == "SK6812") ? [.white, .white] : [Color(red: 1, green: 0.73, blue: 0.3), .white, .cyan.opacity(0.6)], startPoint: .top, endPoint: .bottom)).frame(width: 28, height: 28)
+                                        .padding(6).overlay { Circle().strokeBorder(white ? .white : .clear, lineWidth: 2) }
+                                }.accessibilityLabel(editor.strip == "WS2805" ? "White temperature wheel" : "White channel").accessibilityAddTraits(white ? .isSelected : [])
+                            }
+                        }.padding(5).background(.white.opacity(0.1), in: Capsule())
+                        Spacer()
 
-                }.padding(.horizontal, 22).disabled(editor.loading || editor.loadFailed || client.state == nil)
+                    }.padding(.horizontal, 22).disabled(editor.loading || editor.loadFailed || client.state == nil)
+                }
                 if mode == .gradient {
                 VStack(spacing: 12) {
                     LinearGradient(colors: colors.count == 1 ? colors + colors : colors, startPoint: .leading, endPoint: .trailing)
@@ -105,7 +107,7 @@ struct ColorControls: View {
                         HStack(spacing: 12) {
                             ForEach(Array(editor.points.enumerated()), id: \.element.id) { index, point in
                                 Button { editor.selected = point.id } label: {
-                                    Circle().fill(point.white && editor.strip == "WS2814" ? Color.white : point.preview).frame(width: 36, height: 36)
+                                    Circle().fill(point.white && (editor.strip == "WS2814" || editor.strip == "SK6812") ? Color.white : point.preview).frame(width: 36, height: 36)
                                         .overlay { Text("\(index + 1)").font(.system(size: 13, weight: .bold)).foregroundStyle(.black.opacity(0.7)) }
                                         .padding(4).overlay { Circle().strokeBorder(point.id == editor.selected ? .white : .clear, lineWidth: 2) }
                                 }.accessibilityLabel("Select point \(index + 1)").accessibilityAddTraits(point.id == editor.selected ? .isSelected : [])
@@ -164,7 +166,7 @@ private struct ColorWheel: View {
             let radius = geometry.size.width / 2
             ZStack {
                 if white {
-                    Circle().fill(LinearGradient(colors: editor.strip == "WS2814" ? [.white, .white] : [Color(red: 1, green: 0.73, blue: 0.3), Color(red: 1, green: 0.93, blue: 0.65), .white, Color(red: 0.78, green: 0.93, blue: 1)], startPoint: .top, endPoint: .bottom))
+                    Circle().fill(LinearGradient(colors: (editor.strip == "WS2814" || editor.strip == "SK6812") ? [.white, .white] : [Color(red: 1, green: 0.73, blue: 0.3), Color(red: 1, green: 0.93, blue: 0.65), .white, Color(red: 0.78, green: 0.93, blue: 1)], startPoint: .top, endPoint: .bottom))
                 } else {
                     Circle().fill(AngularGradient(gradient: Gradient(colors: (0...12).map { Color(hue: Double($0) / 12, saturation: 1, brightness: 1) }), center: .center, startAngle: .degrees(-120), endAngle: .degrees(240)))
                         .overlay { Circle().fill(RadialGradient(colors: [.white, .white.opacity(0)], center: .center, startRadius: 0, endRadius: radius)) }
@@ -179,7 +181,7 @@ private struct ColorWheel: View {
                     let y = white ? (editor.strip == "WS2805" ? point.temperature * 2 - 1 : 0) : sin(point.hue * 2 * .pi - 2 * .pi / 3) * point.saturation
                     let limit = sqrt(max(0, 1 - y * y))
                     let x = white ? min(max(point.whiteX ?? 0, -limit), limit) : cos(point.hue * 2 * .pi - 2 * .pi / 3) * point.saturation
-                    Circle().fill(point.white && editor.strip == "WS2814" ? Color.white : point.preview).frame(width: point.id == editor.selected ? 34 : 28, height: point.id == editor.selected ? 34 : 28)
+                    Circle().fill(point.white && (editor.strip == "WS2814" || editor.strip == "SK6812") ? Color.white : point.preview).frame(width: point.id == editor.selected ? 34 : 28, height: point.id == editor.selected ? 34 : 28)
                         .overlay { Circle().strokeBorder(.white, lineWidth: 3) }
                         .overlay { Text("\(index + 1)").font(.system(size: 12, weight: .bold)).foregroundStyle(.black.opacity(0.7)) }
                         .shadow(color: .black.opacity(0.6), radius: 3, y: 2)

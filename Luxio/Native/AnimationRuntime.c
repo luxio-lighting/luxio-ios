@@ -43,7 +43,7 @@ static int pixel_count(lua_State *L) {
 }
 static int color_type(lua_State *L) {
     LuxioAnimation *a = *(LuxioAnimation **)lua_getextraspace(L);
-    lua_pushstring(L, a->strip == 2805 ? "RGBCCT" : a->strip == 2814 ? "RGBW" : "RGB"); return 1;
+    lua_pushstring(L, a->strip == 2805 ? "RGBCCT" : (a->strip == 2814 || a->strip == 6812) ? "RGBW" : "RGB"); return 1;
 }
 static int milliseconds(lua_State *L) {
     LuxioAnimation *a = *(LuxioAnimation **)lua_getextraspace(L);
@@ -69,7 +69,7 @@ static int set_pixel(lua_State *L) {
         if (value < 0 || value > 255) return luaL_error(L, "Channels must be 0-255");
         values[c] = (int)value;
     }
-    if ((a->strip == 2805 && values[3]) || (a->strip == 2814 && (values[4] || values[5])) ||
+    if ((a->strip == 2805 && values[3]) || ((a->strip == 2814 || a->strip == 6812) && (values[4] || values[5])) ||
         (a->strip == 2812 && (values[3] || values[4] || values[5]))) return luaL_error(L, "Channel unavailable on this strip type");
     for (int c = 0; c < 6; c++) a->pixels[index * 6 + c] = (uint8_t)values[c];
     return 0;
@@ -90,7 +90,7 @@ static int initialize(lua_State *L) {
     return 0;
 }
 LuxioAnimation *luxio_animation_create(int count, int strip) {
-    if (count < 1 || count > 1024 || (strip != 2805 && strip != 2814 && strip != 2812)) return NULL;
+    if (count < 1 || count > 1024 || (strip != 2805 && strip != 2814 && strip != 2812 && strip != 6812)) return NULL;
     LuxioAnimation *a = calloc(1, sizeof(*a)); if (!a) return NULL;
     a->count = count; a->strip = strip;
     a->lua = lua_newstate(allocate, a);

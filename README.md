@@ -11,6 +11,8 @@ xcodebuild -project Luxio.xcodeproj -scheme Luxio -sdk iphoneos -configuration D
 
 Firmware updates are in each light's settings. Checking does not install. Installation requires a separate tap, explains the offline period, and offers the recovery page if the download fails. There are no automatic installs.
 
+Discovery starts with local mDNS (`_luxio._tcp`). If startup mDNS finds no reachable Luxio, discovery falls back to the cloud device list. Manually pulling down the home list also queries the cloud; background polling stays local. Candidates must answer a local state request before appearing; background local checks remove unreachable devices and bring them back when they recover. Opening a card uses its cached address and state immediately. Startup placeholders use the last discovered device count, and both pull-to-refresh controls remain active for at least 500 ms.
+
 ## Local verification
 
 The app and tests use only this checkout. Node dependencies are required only for the cross-language and preset checks:
@@ -57,3 +59,63 @@ with the physical strip. Swatches retain the app's full-brightness presentation.
 `npm run test:animation` checks output, parameters, sandboxing, and resource limits.
 
 Animation presets include preview palettes and live parameters. `Slider` and `Checkbox` declarations require firmware build 21 or newer; `Number` selects a numeric input. Older firmware parameter metadata continues to display numeric values as sliders. `Boolean` remains a legacy alias for `Checkbox`.
+
+## Virtual device
+
+The empty home screen offers **Try the Simulator**, which opens a 60-LED RGBCCT
+Luxio Simulator. It supports the normal color/white editor, gradients, animations,
+parameters, power, brightness and saved libraries. Its local device API uses no
+HTTP; state and saved items persist on the phone. Animated headers and tiles use
+the same native Lua preview runtime. Settings allow renaming, changing LED count,
+and removing the simulator; hardware-only firmware and Matter controls are hidden.
+`npm run test:simulator` checks these local controls, library persistence and that
+no network requests are sent.
+
+## Bluetooth and Wi-Fi setup (firmware build 24)
+
+The iOS app discovers the Luxio GATT service alongside Bonjour. Allow Bluetooth
+access when prompted and keep Luxio nearby. A successful state request supplies
+the fingerprint, so Wi-Fi and Bluetooth discoveries share one light and client.
+Colors, power, brightness, saved resources, animation uploads and Matter pairing
+codes use the same Protobuf operations over either transport. Requests over BLE
+are queued, framed and fragmented at the negotiated write size; timeouts,
+cancellation and disconnects reset the connection before another request.
+
+Open a light's settings → Wi-Fi to scan networks, enter credentials and connect.
+A hidden network can be entered manually; open networks do not need a password.
+Credentials are sent to the light and are not saved in the app. Firmware 24
+requires an encrypted BLE link and uses OS pairing for the displayless device.
+The Matter QR/manual code remains under settings → Matter → Show Pairing Code.
+Matter commissioning uses the light's Wi-Fi connection; Bluetooth is Luxio's
+setup/control transport.
+
+Known network addresses remain usable when Bluetooth becomes unavailable, and
+BLE can take over when LAN requests fail. While using BLE, state refreshes probe
+Wi-Fi at most once every ten seconds and switch back after a valid response from
+the same light. A LAN address reported over BLE can be used before Bonjour
+resolves. The device list shows the active transport icon before the name.
+Only read-only state requests are
+retried automatically across transports: an ambiguous mutation is never replayed.
+Bluetooth scanning/connections pause in the background and resume in foreground.
+Manual refresh restarts discovery, including after a rejected pairing attempt.
+
+`npm run test:bluetooth` tests framing boundaries, malformed/oversized frames,
+transport routing, Wi-Fi signal decoding, cancellation and mutation replay
+protection. `testWifiSetupAndMatterCode` exercises the setup and QR screens using
+the local UI fixture. Simulator tests cannot qualify the physical BLE radio.
+
+Firmware build 27 adds optional relay control in Settings: Relay, Relay GPIO and
+Invert Relay. It defaults to disabled; GPIO0 is a valid relay pin. The relay GPIO
+must differ from Data Pin. GL-C-016WL-D revisions use GPIO12 without inversion
+(older manual) or GPIO18 with inversion (current manufacturer manual); data stays
+on GPIO16. Check the controller revision. Older firmware shows the setting
+disabled until updated.
+
+The physically tested GL-C-016WL-D unit requires Relay GPIO18 with inversion off,
+with data on GPIO16. Verify polarity on the actual unit: app On must supply strip
+power. The model name alone does not determine the relay revision or polarity.
+
+Build 28 hides Matter settings when the firmware reports `matter_disabled`. Older
+firmware without that capability flag keeps its existing Matter controls.
+
+Firmware build 34 adds Enable Wi-Fi and Enable Matter as the first switches in their settings sections. Saving either change restarts the controller. Disabling the app’s current Wi-Fi transport requires confirmation; Bluetooth changes do not. Both switches default enabled, and availability remains separate from the Matter preference. SK6812 exposes a single white channel and is also available in the local simulator.

@@ -169,9 +169,12 @@ struct LightPreset: Identifiable, Encodable {
         function setup() end
         function loop()
           local phase = luxio_millis() / 1800 * luxio_get_parameter("Speed") / 50
+          local pulse = luxio_get_parameter("Pulse")
+          local spacing = luxio_get_parameter("Spacing")
+          local sin, floor = math.sin, math.floor
           for i = 0, luxio_get_pixel_count() - 1 do
-            local t = luxio_get_parameter("Pulse") and (0.35 + 0.65 * (math.sin(i / luxio_get_parameter("Spacing") + phase) + 1) / 2) or 1
-            luxio_set_pixel_color(i, math.floor(\(rgb[0]) * t), math.floor(\(rgb[1]) * t), math.floor(\(rgb[2]) * t))
+            local t = pulse and (0.35 + 0.65 * (sin(i / spacing + phase) + 1) / 2) or 1
+            luxio_set_pixel_color(i, floor(\(rgb[0]) * t), floor(\(rgb[1]) * t), floor(\(rgb[2]) * t))
           end
         end
         """

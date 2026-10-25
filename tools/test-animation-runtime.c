@@ -35,10 +35,10 @@ int main(void) {
     a = luxio_animation_create(1, 2814); assert(a);
     assert(luxio_animation_start(a, "function loop() luxio_set_pixel_color(0,0,0,0,255) end"));
     assert(luxio_animation_frame(a, 33)[3] == 255); luxio_animation_destroy(a);
-    int strips[] = {2812, 2814, 2805};
+    int strips[] = {2812, 2814, 2805, 6812};
     int counts[] = {1, 60, 1024};
-    const uint8_t expected[][6] = {{255,190,105,0,0,0}, {0,0,0,255,0,0}, {0,0,0,0,180,75}};
-    for (int strip = 0; strip < 3; strip++) for (int count = 0; count < 3; count++) {
+    const uint8_t expected[][6] = {{255,190,105,0,0,0}, {0,0,0,255,0,0}, {0,0,0,0,180,75}, {0,0,0,255,0,0}};
+    for (int strip = 0; strip < 4; strip++) for (int count = 0; count < 3; count++) {
         a = luxio_animation_create(counts[count], strips[strip]); assert(a);
         assert(luxio_animation_start(a,
             "local kind = luxio_get_color_type()\n"

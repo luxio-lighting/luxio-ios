@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { Device } from '../shared/device/src/device.js';
 import { root } from '../shared/protocol/src/index.js';
 mkdirSync('.sdk/swift-module-cache', { recursive: true });
-execFileSync('swiftc', ['-module-cache-path', '.sdk/swift-module-cache', 'Luxio/Protocol.swift', 'Luxio/Gradient.swift', 'tools/test-gradient.swift', '-o', '.sdk/test-gradient'], { stdio: 'inherit' });
+execFileSync('swiftc', ['-module-cache-path', '.sdk/swift-module-cache', 'Luxio/Protocol.swift', 'Luxio/SimulatorDevice.swift', 'Luxio/Gradient.swift', 'tools/test-gradient.swift', '-o', '.sdk/test-gradient'], { stdio: 'inherit' });
 const fixtures: { name: string; strip: string; bytes: string; stops: number[][] }[] = JSON.parse(execFileSync('.sdk/test-gradient', { encoding: 'utf8' }));
 writeFileSync('.sdk/custom-gradients.json', JSON.stringify(fixtures));
 console.log('PASS: wheel coordinates, RGB round-trip, white channels, metadata round-trip and invalid metadata rejection');

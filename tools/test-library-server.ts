@@ -43,8 +43,10 @@ function loop()
  end
 end` } });
 fixtures.set('/live/api', liveDevice);
-const settingsDevice = new Device('settings-fixture'); settingsDevice.state.config.name = 'Library test';
+const settingsDevice = new Device('settings-fixture'); settingsDevice.state.config.name = 'Library test'; settingsDevice.state.build = 34;
 fixtures.set('/settings/api', settingsDevice);
+const relayDevice = new Device('relay-fixture'); relayDevice.state.config.name = 'Library test'; relayDevice.state.build = 27; relayDevice.state.config.gpio = 16;
+fixtures.set('/relay/api', relayDevice);
 const saveDevice = new Device('save-tiles-fixture'); saveDevice.state.config.name = 'Library test';
 fixtures.set('/save-tiles/api', saveDevice);
 const whiteDevice = new Device('white-drag-fixture'); whiteDevice.state.config.name = 'Library test';
@@ -57,9 +59,36 @@ const renameColor = renameDevice.handle({ id: 600, operation: 27, savedColor: { 
 const renameGradient = renameDevice.handle({ id: 601, operation: 20, gradient: { id: '', name: 'Saved gradient', colors, editorMetadata: '{"custom":"preserve these editor coordinates"}' } }).gradient!;
 const renameAnimation = renameDevice.handle({ id: 602, operation: 7, script: { id: '', name: 'Saved animation', source: '-- @preview ff0000,0000ff\n-- @parameter Speed,Number,50,0,100\nfunction loop() end', parameters: [{ name: 'Speed', boolean: false, value: 73, defaultValue: 50, minimum: 0, maximum: 100 }] } }).script!;
 fixtures.set('/rename/api', renameDevice);
+const wifiDevice = new Device('wifi-fixture'); wifiDevice.state.config.name = 'Library test'; wifiDevice.state.lanIp = '';
+let wifiConnected = false;
+let updateCheckUntil = 0;
 createServer(async (request, response) => {
   const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
   const input = decodeRequest(Buffer.concat(chunks));
+  if (request.url === '/updates/api') {
+    if (input.operation === 13) updateCheckUntil = Date.now() + 6000;
+    response.setHeader('Content-Type', 'application/x-protobuf');
+    response.end(encodeResponse({ ...settingsDevice.handle({ id: input.id, operation: 0 }), availableBuild: 0, updateChecking: Date.now() < updateCheckUntil })); return;
+  }
+  if (request.url === '/wifi/api' || request.url === '/wifi-slow/api') {
+    if (request.url === '/wifi-slow/api' && input.operation === 16) await new Promise(resolve => setTimeout(resolve, 8000));
+    if (input.operation === 4) {
+      if (!((['Test Network', 'Hidden Network'].includes(input.wifi?.ssid ?? '') && input.wifi?.password === 'test-password') || (input.wifi?.ssid === 'Open Network' && input.wifi.password === ''))) {
+        response.end(encodeResponse({ id: input.id, error: 'Incorrect fixture credentials' })); return;
+      }
+      wifiConnected = true; wifiDevice.state.lanIp = '192.0.2.10';
+    }
+    const result = [4, 16].includes(input.operation) ? wifiDevice.handle({ id: input.id, operation: 0 }) : wifiDevice.handle(input);
+    if (input.operation === 16) result.wifiNetworks = [{ ssid: 'Test Network', rssi: -42, passwordRequired: true }, { ssid: 'Open Network', rssi: -65, passwordRequired: false }];
+    if (input.operation === 12) { result.error = ''; result.pairingCode = '34970112332'; result.pairingQr = 'MT:WIFI-UI-FIXTURE'; }
+    response.setHeader('Content-Type', 'application/x-protobuf');
+    response.end(encodeResponse({ ...result, networkStatus: { connected: wifiConnected, ssid: wifiConnected ? 'Test Network' : '', gateway: wifiConnected ? '192.0.2.1' : '', dns: wifiConnected ? ['192.0.2.1'] : [] } })); return;
+  }
+  if (request.url === '/unreachable/api') {
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    response.writeHead(503); response.end(); return;
+  }
+  if (request.url === '/cached/api' && input.operation === 0) await new Promise(resolve => setTimeout(resolve, 2500));
   if (['/parameters/api', '/options/api'].includes(request.url ?? '') && [7, 8].includes(input.operation)) { response.end(encodeResponse({ id: input.id, error: 'Settings must stay local to the phone' })); return; }
   if (request.url === '/rename/api' && [28, 21, 8].includes(input.operation)) {
     const original = input.operation === 28 ? renameColor : input.operation === 21 ? renameGradient : renameAnimation;
@@ -74,5 +103,6 @@ createServer(async (request, response) => {
   const result = request.url === '/settings/api' && input.operation === 12
     ? { id: input.id, error: '', scripts: [], pairingCode: '34970112332', pairingQr: 'MT:SETTINGS-UI-FIXTURE', availableBuild: 0 }
     : (fixtures.get(request.url ?? "") ?? device).handle(input);
+  if (request.url === '/settings/api') result.networkStatus = { connected: true, ssid: 'Home Wi-Fi', gateway: '192.0.2.1', dns: ['192.0.2.1', '1.1.1.1'] };
   response.end(encodeResponse(result));
-}).listen(8082, '127.0.0.1', () => console.log('Library UI fixture: 127.0.0.1:8082'));
+}).listen(Number(process.env.LUXIO_UI_TEST_PORT ?? 8082), '127.0.0.1', () => console.log('Library UI fixture: 127.0.0.1:8082'));

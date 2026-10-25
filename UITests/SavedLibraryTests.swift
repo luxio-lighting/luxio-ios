@@ -1,6 +1,243 @@
 import XCTest
 
 final class SavedLibraryTests: XCTestCase {
+    func testDeviceHeaderNameRemainsVisible() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/settings"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        let title = app.staticTexts["device-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertEqual(title.label, "Library test")
+        XCTAssertTrue(title.isHittable)
+        XCTAssertGreaterThan(title.frame.width, 60)
+        XCTAssertLessThan(title.frame.minX, 100)
+        let header = XCTAttachment(screenshot: app.screenshot()); header.name = "Device header"; header.lifetime = .keepAlways; add(header)
+    }
+
+    func testSK6812SimulatorSettings() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8087/unreachable"
+        app.launch()
+        XCTAssertTrue(app.buttons["Try the Simulator"].waitForExistence(timeout: 15)); app.buttons["Try the Simulator"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5)); app.buttons["Luxio settings"].tap()
+        XCTAssertTrue(app.buttons["settings-strip"].waitForExistence(timeout: 5)); app.buttons["settings-strip"].tap()
+        app.buttons["SK6812"].tap()
+        app.navigationBars["Settings"].buttons["Save"].tap()
+        XCTAssertTrue(app.segmentedControls.buttons["Color"].waitForExistence(timeout: 5)); app.segmentedControls.buttons["Color"].tap()
+        XCTAssertTrue(app.buttons["White channel"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["White temperature wheel"].exists)
+        app.buttons["White channel"].tap()
+        app.buttons["Luxio settings"].tap()
+        XCTAssertTrue(app.buttons["settings-strip"].label.contains("SK6812"))
+    }
+
+    func testRadioSettingsAndWifiConfirmation() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8087/settings"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        app.buttons["Luxio settings"].tap()
+        let wifi = app.switches["settings-wifi-enabled"]
+        for _ in 0..<4 where !wifi.isHittable { app.swipeUp() }
+        XCTAssertEqual(wifi.value as? String, "1"); XCTAssertTrue(wifi.isEnabled)
+        wifi.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        app.navigationBars["Settings"].buttons["Save"].tap()
+        XCTAssertTrue(app.buttons["Disable Wi-Fi"].waitForExistence(timeout: 5))
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].exists)
+        app.navigationBars["Settings"].buttons["Save"].tap()
+        app.buttons["Disable Wi-Fi"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5)); app.buttons["Luxio settings"].tap()
+        for _ in 0..<4 where !wifi.isHittable { app.swipeUp() }
+        XCTAssertEqual(wifi.value as? String, "0")
+        wifi.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        let matter = app.switches["settings-matter-enabled"]
+        for _ in 0..<4 where !matter.isHittable { app.swipeUp() }
+        XCTAssertTrue(matter.isEnabled); XCTAssertEqual(matter.value as? String, "1")
+        matter.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        app.navigationBars["Settings"].buttons["Save"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5)); app.buttons["Luxio settings"].tap()
+        for _ in 0..<4 where !matter.isHittable { app.swipeUp() }
+        XCTAssertEqual(matter.value as? String, "0")
+        XCTAssertFalse(app.buttons["Show Pairing Code"].exists)
+    }
+
+    func testRelaySettings() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8083/relay"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5)); app.buttons["Luxio settings"].tap()
+        let enabled = app.switches["settings-relay-enabled"]
+        XCTAssertTrue(enabled.waitForExistence(timeout: 5)); XCTAssertEqual(enabled.value as? String, "0")
+        XCTAssertTrue(enabled.isEnabled)
+        enabled.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        XCTAssertEqual(enabled.value as? String, "1")
+        let pin = app.textFields["settings-relay-gpio"]
+        XCTAssertTrue(pin.waitForExistence(timeout: 5))
+        let save = app.navigationBars["Settings"].buttons["Save"].firstMatch
+        for value in ["55", "16", "12"] {
+            pin.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+            pin.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (pin.value as? String ?? "").count) + value)
+            XCTAssertEqual(save.isEnabled, value == "12")
+        }
+        app.switches["settings-relay-inverted"].coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap(); save.tap()
+        XCTAssertTrue(save.waitForNonExistence(timeout: 10))
+        app.buttons["Luxio settings"].tap()
+        XCTAssertTrue(pin.waitForExistence(timeout: 5)); XCTAssertEqual(pin.value as? String, "12")
+        XCTAssertEqual(enabled.value as? String, "1")
+        XCTAssertEqual(app.switches["settings-relay-inverted"].value as? String, "1")
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Relay settings"; screenshot.lifetime = .keepAlways; add(screenshot)
+        enabled.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap(); save.tap()
+        XCTAssertTrue(save.waitForNonExistence(timeout: 10)); app.buttons["Luxio settings"].tap()
+        XCTAssertTrue(enabled.waitForExistence(timeout: 5)); XCTAssertEqual(enabled.value as? String, "0")
+        XCTAssertFalse(pin.exists)
+    }
+
+    func testWifiSetupAndMatterCode() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/wifi"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5)); app.buttons["Luxio settings"].tap()
+        XCTAssertTrue(app.buttons["Configure Wi-Fi"].waitForExistence(timeout: 5)); app.buttons["Configure Wi-Fi"].tap()
+        let network = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Test Network")).firstMatch
+        XCTAssertTrue(network.waitForExistence(timeout: 10))
+        let networks = XCTAttachment(screenshot: app.screenshot()); networks.name = "Wi-Fi networks"; networks.lifetime = .keepAlways; add(networks)
+        XCTAssertFalse(app.secureTextFields["wifi-password"].exists)
+        network.tap()
+        XCTAssertFalse(app.buttons["wifi-connect"].isEnabled)
+        let password = app.secureTextFields["wifi-password"]
+        password.tap(); password.typeText("wrong-password")
+        app.buttons["wifi-connect"].tap()
+        XCTAssertTrue(app.staticTexts["Incorrect fixture credentials"].waitForExistence(timeout: 10))
+        app.buttons["Show password"].tap()
+        let visiblePassword = app.textFields["wifi-password"]
+        XCTAssertEqual(visiblePassword.value as? String, "wrong-password")
+        visiblePassword.tap(); visiblePassword.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 14) + "test-password")
+        XCTAssertFalse(app.staticTexts["Incorrect fixture credentials"].exists)
+        app.buttons["Hide password"].tap()
+        let credentials = XCTAttachment(screenshot: app.screenshot()); credentials.name = "Wi-Fi password"; credentials.lifetime = .keepAlways; add(credentials)
+        XCTAssertTrue(app.buttons["wifi-connect"].isEnabled); app.buttons["wifi-connect"].tap()
+        let success = app.staticTexts["You're connected"]
+        XCTAssertTrue(success.waitForExistence(timeout: 15))
+        let setup = XCTAttachment(screenshot: app.screenshot()); setup.name = "Wi-Fi setup"; setup.lifetime = .keepAlways; add(setup)
+        app.buttons["wifi-done"].tap()
+        app.swipeUp()
+        app.buttons["Show Pairing Code"].tap()
+        XCTAssertTrue(app.staticTexts["pairing-code"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.images["Matter Pairing QR Code"].exists)
+    }
+
+    func testWifiManualEntryDuringScan() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/wifi-slow"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        app.buttons["Luxio settings"].tap(); app.buttons["Configure Wi-Fi"].tap()
+        XCTAssertTrue(app.staticTexts["Finding nearby networks…"].waitForExistence(timeout: 5))
+        let scanning = XCTAttachment(screenshot: app.screenshot()); scanning.name = "Wi-Fi scanning"; scanning.lifetime = .keepAlways; add(scanning)
+        app.buttons["wifi-other"].tap()
+        let name = app.textFields["wifi-ssid"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5)); name.tap(); name.typeText("Hidden Network")
+        let password = app.secureTextFields["wifi-password"]; password.tap(); password.typeText("test-password")
+        XCTAssertTrue(app.buttons["wifi-connect"].isEnabled); app.buttons["wifi-connect"].tap()
+        XCTAssertTrue(app.staticTexts["You're connected"].waitForExistence(timeout: 15))
+    }
+
+    func testWifiOpenNetwork() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/wifi"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        app.buttons["Luxio settings"].tap(); app.buttons["Configure Wi-Fi"].tap()
+        XCTAssertTrue(app.buttons["Open Network"].waitForExistence(timeout: 10)); app.buttons["Open Network"].tap()
+        XCTAssertFalse(app.secureTextFields["wifi-password"].exists)
+        XCTAssertTrue(app.buttons["wifi-connect"].isEnabled); app.buttons["wifi-connect"].tap()
+        XCTAssertTrue(app.staticTexts["You're connected"].waitForExistence(timeout: 15))
+    }
+
+    func testVirtualLuxio() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/unreachable"
+        app.launch()
+        XCTAssertTrue(app.buttons["Try the Simulator"].waitForExistence(timeout: 15))
+        let empty = XCTAttachment(screenshot: app.screenshot())
+        empty.name = "Try the Simulator"; empty.lifetime = .keepAlways; add(empty)
+        app.buttons["Try the Simulator"].tap()
+        XCTAssertTrue(app.segmentedControls["Light mode"].waitForExistence(timeout: 3))
+        app.segmentedControls.buttons["Color"].tap()
+        XCTAssertTrue(app.buttons["White temperature wheel"].waitForExistence(timeout: 5))
+        app.buttons["White temperature wheel"].tap()
+        XCTAssertTrue(app.buttons["White temperature wheel"].isSelected)
+        app.segmentedControls.buttons["Gradient"].tap()
+        let point = app.buttons["Add point"]
+        for _ in 0..<6 {
+            if point.isHittable { break }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)))
+        }
+        point.tap()
+        XCTAssertTrue(app.buttons["Select point 3"].waitForExistence(timeout: 3))
+        app.segmentedControls.buttons["Animation"].tap()
+        XCTAssertTrue(app.buttons["Play Rainbow"].waitForExistence(timeout: 5))
+        app.buttons["Play Rainbow"].tap()
+        XCTAssertTrue(app.buttons["Settings for Rainbow"].waitForExistence(timeout: 5))
+        let animation = XCTAttachment(screenshot: app.screenshot())
+        animation.name = "Virtual Luxio animation"; animation.lifetime = .keepAlways; add(animation)
+        app.buttons["Luxio settings"].tap()
+        XCTAssertTrue(app.buttons["settings-strip"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Check for Updates"].exists)
+        XCTAssertFalse(app.buttons["Show Pairing Code"].exists)
+        XCTAssertFalse(app.textFields["settings-gpio"].exists)
+        let settings = XCTAttachment(screenshot: app.screenshot())
+        settings.name = "Virtual Luxio settings"; settings.lifetime = .keepAlways; add(settings)
+        app.buttons["Remove Simulator"].tap()
+        XCTAssertTrue(app.buttons["Try the Simulator"].waitForExistence(timeout: 5))
+    }
+
+    func testHomeSkeletonsAndEmptyState() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-lastDiscoveredLightCount", "3"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/unreachable"
+        app.launch()
+        XCTAssertTrue(app.otherElements["light-skeleton-0"].waitForExistence(timeout: 3))
+        let skeletons = XCTAttachment(screenshot: app.screenshot())
+        skeletons.name = "Remembered device skeletons"; skeletons.lifetime = .keepAlways; add(skeletons)
+        XCTAssertEqual(app.otherElements.matching(NSPredicate(format: "identifier BEGINSWITH 'light-skeleton-'")).count, 3)
+        XCTAssertTrue(app.staticTexts["No Luxio Devices Found"].waitForExistence(timeout: 12))
+        XCTAssertFalse(app.buttons["Library test"].exists)
+        XCTAssertFalse(app.otherElements["light-skeleton-0"].exists)
+        XCTAssertTrue(app.buttons["Add Luxio"].exists)
+        XCTAssertFalse(app.buttons["Connect Luxio"].exists)
+        XCTAssertFalse(app.staticTexts["Pull down to search again."].exists)
+        let empty = XCTAttachment(screenshot: app.screenshot())
+        empty.name = "No reachable lights"; empty.lifetime = .keepAlways; add(empty)
+    }
+
+    func testCachedDeviceOpensWithoutWaiting() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-lastDiscoveredLightCount", "1"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/cached"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        app.buttons["Library test"].tap()
+        // State requests take 2.5 seconds; opening must not await another request.
+        XCTAssertTrue(app.segmentedControls["Light mode"].waitForExistence(timeout: 1))
+        XCTAssertTrue(app.segmentedControls.buttons["Gradient"].isSelected)
+        XCTAssertEqual(app.otherElements["Brightness"].value as? String, "6 percent")
+        XCTAssertTrue(app.navigationBars.firstMatch.exists)
+    }
+
     func testRenameSavedItems() throws {
         let app = XCUIApplication()
         app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/rename"
@@ -154,9 +391,8 @@ final class SavedLibraryTests: XCTestCase {
         app.buttons["Library test"].tap()
         app.segmentedControls.buttons["Animation"].tap()
         XCTAssertTrue(app.staticTexts["saved-empty-state"].waitForExistence(timeout: 10))
-        XCTAssertEqual(app.staticTexts["saved-empty-state"].label, "No saved animations yet.")
-        XCTAssertTrue(app.staticTexts["studio-hint"].exists)
-        XCTAssertEqual(app.staticTexts["studio-hint"].label, "To create your own animations, try Luxio Studio.")
+        XCTAssertEqual(app.staticTexts["saved-empty-state"].label, "No saved animations yet. To create your own animations, try Luxio Studio.")
+        XCTAssertFalse(app.staticTexts["studio-hint"].exists)
         for _ in 0..<3 {
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.35)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.85)))
         }
@@ -227,14 +463,72 @@ final class SavedLibraryTests: XCTestCase {
         waitForExpectations(timeout: 10)
     }
 
+    func testFirmwareUpdateCheck() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/updates"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5)); app.buttons["Luxio settings"].tap()
+        let check = app.buttons["Check for Updates"]
+        XCTAssertTrue(check.waitForExistence(timeout: 5)); check.tap()
+        let checking = app.buttons["Checking..."]
+        XCTAssertTrue(checking.waitForExistence(timeout: 3))
+        XCTAssertFalse(checking.isEnabled)
+        XCTAssertTrue(app.activityIndicators.firstMatch.exists)
+        let progress = XCTAttachment(screenshot: app.screenshot()); progress.name = "Checking for Updates"; progress.lifetime = .keepAlways; add(progress)
+        let alert = app.alerts["Up to Date"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 12))
+        XCTAssertTrue(alert.staticTexts["Your Luxio is running the latest firmware."].exists)
+        let result = XCTAttachment(screenshot: app.screenshot()); result.name = "Firmware up to date"; result.lifetime = .keepAlways; add(result)
+        alert.buttons["OK"].tap()
+        XCTAssertTrue(alert.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(check.isEnabled)
+        XCTAssertFalse(checking.exists)
+    }
+
+    func testWifiSettingsDetails() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/settings"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        let title = app.descendants(matching: .any)["device-title"].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertEqual(title.label, "Library test")
+        XCTAssertTrue(title.isHittable)
+        XCTAssertGreaterThan(title.frame.width, 60)
+        let header = XCTAttachment(screenshot: app.screenshot()); header.name = "Device header"; header.lifetime = .keepAlways; add(header)
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5)); app.buttons["Luxio settings"].tap()
+        let connection = app.descendants(matching: .any)["connection-type"].firstMatch
+        XCTAssertTrue(connection.waitForExistence(timeout: 5))
+        XCTAssertEqual(connection.value as? String, "Wi-Fi")
+        for (label, value) in [("SSID", "Home Wi-Fi"), ("IP Address", "127.0.0.1"), ("Gateway", "192.0.2.1"), ("DNS", "192.0.2.1, 1.1.1.1")] {
+            for _ in 0..<3 where !app.staticTexts[label].exists { app.swipeUp() }
+            XCTAssertTrue(app.staticTexts[label].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.debugDescription.contains(value), "Missing \(label): \(value)")
+        }
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Wi-Fi settings details"; screenshot.lifetime = .keepAlways; add(screenshot)
+        app.swipeUp()
+        let pairing = app.buttons["Show Pairing Code"]
+        XCTAssertTrue(pairing.waitForExistence(timeout: 5)); pairing.tap()
+        XCTAssertTrue(app.staticTexts["pairing-code"].waitForExistence(timeout: 5))
+        let matter = XCTAttachment(screenshot: app.screenshot()); matter.name = "Matter pairing button"; matter.lifetime = .keepAlways; add(matter)
+        app.swipeDown()
+        let configure = app.buttons["Configure Wi-Fi"]
+        if !configure.isHittable { app.swipeUp() }
+        configure.tap()
+        XCTAssertTrue(app.staticTexts["Choose a network"].waitForExistence(timeout: 5))
+    }
+
     func testSettingsLayout() throws {
         let app = XCUIApplication()
         app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/settings"
         app.launch()
         XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
         app.buttons["Library test"].tap()
-        XCTAssertTrue(app.buttons["Light settings"].waitForExistence(timeout: 10))
-        app.buttons["Light settings"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 10))
+        app.buttons["Luxio settings"].tap()
         let count = app.textFields["settings-count"]
         XCTAssertTrue(count.waitForExistence(timeout: 10))
         let save = app.navigationBars.buttons["Save"]
@@ -252,7 +546,7 @@ final class SavedLibraryTests: XCTestCase {
         }
         save.tap()
         XCTAssertTrue(save.waitForNonExistence(timeout: 10))
-        app.buttons["Light settings"].tap()
+        app.buttons["Luxio settings"].tap()
         XCTAssertTrue(count.waitForExistence(timeout: 10))
         XCTAssertEqual(count.value as? String, "61")
         XCTAssertEqual(pin.value as? String, "17")
@@ -266,6 +560,29 @@ final class SavedLibraryTests: XCTestCase {
         screenshot.name = "Settings with pairing code"; screenshot.lifetime = .keepAlways; add(screenshot)
     }
 
+    func testListPowerExpansion() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/settings"
+        app.launchArguments += ["-luxio.simulator.enabled", "YES"]
+        app.launch()
+        let power = app.switches["Luxio Simulator power"]
+        XCTAssertTrue(power.waitForExistence(timeout: 10))
+        let lowerCard = app.buttons["Library test"]
+        XCTAssertTrue(lowerCard.waitForExistence(timeout: 10))
+        if power.value as? String == "1" { power.tap() }
+        XCTAssertEqual(power.value as? String, "0")
+        XCTAssertFalse(app.descendants(matching: .any)["Luxio Simulator brightness"].firstMatch.isHittable)
+        let collapsedY = lowerCard.frame.minY
+        power.tap()
+        XCTAssertEqual(power.value as? String, "1")
+        XCTAssertEqual(lowerCard.frame.minY - collapsedY, 43, accuracy: 1)
+        XCTAssertTrue(app.descendants(matching: .any)["Luxio Simulator brightness"].firstMatch.isHittable)
+        power.tap()
+        XCTAssertEqual(power.value as? String, "0")
+        XCTAssertEqual(lowerCard.frame.minY, collapsedY, accuracy: 1)
+        XCTAssertFalse(app.descendants(matching: .any)["Luxio Simulator brightness"].firstMatch.isHittable)
+    }
+
     func testLiveAnimationPreviews() throws {
         let app = XCUIApplication()
         app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/live"
@@ -277,7 +594,7 @@ final class SavedLibraryTests: XCTestCase {
         Thread.sleep(forTimeInterval: 0.7)
         let home2 = XCTAttachment(screenshot: app.screenshot()); home2.name = "Live home frame 2"; home2.lifetime = .keepAlways; add(home2)
         light.tap()
-        XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars.firstMatch.buttons.element(boundBy: 0).waitForExistence(timeout: 10))
         Thread.sleep(forTimeInterval: 1)
         let header1 = XCTAttachment(screenshot: app.screenshot()); header1.name = "Live header frame 1"; header1.lifetime = .keepAlways; add(header1)
         Thread.sleep(forTimeInterval: 0.7)
@@ -285,7 +602,7 @@ final class SavedLibraryTests: XCTestCase {
         app.switches["Power"].tap()
         Thread.sleep(forTimeInterval: 1)
         let off = XCTAttachment(screenshot: app.screenshot()); off.name = "Live preview powered off"; off.lifetime = .keepAlways; add(off)
-        app.navigationBars["Library test"].buttons.element(boundBy: 0).tap()
+        app.navigationBars.firstMatch.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(light.waitForExistence(timeout: 5))
     }
 
@@ -295,7 +612,7 @@ final class SavedLibraryTests: XCTestCase {
         app.launch()
         let light = app.buttons["Library test"]
         XCTAssertTrue(light.waitForExistence(timeout: 15)); light.tap()
-        XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars.firstMatch.buttons.element(boundBy: 0).waitForExistence(timeout: 10))
         for (mode, first, second) in [
             ("Color", "color-Relax", "color-Read"),
             ("Color", "Apply Saved color 1", "Apply Saved color 2"),
@@ -314,7 +631,7 @@ final class SavedLibraryTests: XCTestCase {
             XCTAssertEqual(card.value as? String, "Loading")
             XCTAssertFalse(card.isEnabled)
             XCTAssertTrue(app.buttons[second].isEnabled)
-            XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).isEnabled)
+            XCTAssertTrue(app.navigationBars.firstMatch.buttons.element(boundBy: 0).isEnabled)
             XCTAssertTrue(app.segmentedControls.buttons["Color"].isEnabled)
             let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Loading \(first)"; screenshot.lifetime = .keepAlways; add(screenshot)
             expectation(for: NSPredicate(format: "exists == true AND value != 'Loading' AND enabled == true"), evaluatedWith: card)
@@ -337,24 +654,24 @@ final class SavedLibraryTests: XCTestCase {
         app.launch()
         let light = app.buttons["Library test"]
         XCTAssertTrue(light.waitForExistence(timeout: 15)); light.tap()
-        XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars.firstMatch.buttons.element(boundBy: 0).waitForExistence(timeout: 10))
         let navigation = XCTAttachment(screenshot: app.screenshot())
         navigation.name = "Native glass navigation"; navigation.lifetime = .keepAlways; add(navigation)
         let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.5))
         // A short, slow drag must cancel and leave the detail screen usable.
         edge.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.18, dy: 0.5)), withVelocity: .slow, thenHoldForDuration: 0.5)
-        XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars.firstMatch.buttons.element(boundBy: 0).waitForExistence(timeout: 5))
         app.segmentedControls.buttons["Animation"].tap()
         XCTAssertTrue(app.buttons["Play Ember"].waitForExistence(timeout: 5))
         for _ in 0..<2 {
             edge.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)), withVelocity: .slow, thenHoldForDuration: 0.1)
-            XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForNonExistence(timeout: 5))
+            XCTAssertTrue(app.navigationBars.firstMatch.buttons.element(boundBy: 0).waitForNonExistence(timeout: 5))
             XCTAssertTrue(light.waitForExistence(timeout: 5))
-            XCTAssertTrue(app.buttons["Connect a light"].exists)
+            XCTAssertTrue(app.buttons["Connect Luxio"].exists)
             light.tap()
-            XCTAssertTrue(app.navigationBars["Library test"].buttons.element(boundBy: 0).waitForExistence(timeout: 5))
+            XCTAssertTrue(app.navigationBars.firstMatch.buttons.element(boundBy: 0).waitForExistence(timeout: 5))
         }
-        app.navigationBars["Library test"].buttons.element(boundBy: 0).tap()
+        app.navigationBars.firstMatch.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(light.waitForExistence(timeout: 5))
     }
 
@@ -381,7 +698,7 @@ final class SavedLibraryTests: XCTestCase {
         expectation(for: NSPredicate(format: "value == 'Playing'"), evaluatedWith: ember)
         waitForExpectations(timeout: 10)
         let animation = XCTAttachment(screenshot: app.screenshot()); animation.name = "Ember preview"; animation.lifetime = .keepAlways; add(animation)
-        app.navigationBars["Library test"].buttons.element(boundBy: 0).tap()
+        app.navigationBars.firstMatch.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(light.waitForExistence(timeout: 5))
         let card = XCTAttachment(screenshot: app.screenshot()); card.name = "Home animation preview"; card.lifetime = .keepAlways; add(card)
     }

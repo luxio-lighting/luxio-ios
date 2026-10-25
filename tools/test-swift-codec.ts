@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { colorSchema, encodeResponse, decodeRequest } from '../shared/protocol/src/index.js';
 mkdirSync('.sdk/swift-module-cache', { recursive: true });
-execFileSync('swiftc', ['-module-cache-path', '.sdk/swift-module-cache', 'Luxio/Protocol.swift', 'tools/test-protocol.swift', '-o', '.sdk/protocol-swift-test'], { stdio: 'inherit' });
+execFileSync('swiftc', ['-module-cache-path', '.sdk/swift-module-cache', 'Luxio/Protocol.swift', 'Luxio/SimulatorDevice.swift', 'tools/test-protocol.swift', '-o', '.sdk/protocol-swift-test'], { stdio: 'inherit' });
 const color = colorSchema.parse({ red: 255, warmWhite: 17, coolWhite: 129 });
 const fixture = encodeResponse({ id: 123, state: { deviceId: 'a'.repeat(64), build: 12, config: { name: 'Desk 💡', stripType: 'WS2805', ledCount: 60, gpio: 16, channel: 100 }, brightness: 256, on: false, color, activeScriptId: '', mode: 1, lanIp: '192.168.1.231' } });
 const output = execFileSync('.sdk/protocol-swift-test', [Buffer.from(fixture).toString('base64')], { encoding: 'utf8' });

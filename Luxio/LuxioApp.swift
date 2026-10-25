@@ -22,84 +22,105 @@ extension LightState {
     var body: some Scene { WindowGroup { LightsView().preferredColorScheme(.dark).tint(accent) } }
 }
 
-@MainActor final class Discovery: NSObject, ObservableObject, @preconcurrency NetServiceBrowserDelegate, @preconcurrency NetServiceDelegate {
-    @Published var lights: [Light] = []
-    @Published var error: String?
-    @Published var searching = false
-    private let browser = NetServiceBrowser()
-    private var services: [NetService] = []
-    override init() { super.init(); browser.delegate = self }
-    func refresh() async {
-#if DEBUG
-        if let address = ProcessInfo.processInfo.environment["LUXIO_UI_TEST_ADDRESS"] {
-            lights = [Light(deviceId: "ui-fixture", name: "Library test", lan_ip: address)]
-            return
-        }
-#endif
-        searching = true; error = nil
-        browser.stop(); services.removeAll()
-        browser.searchForServices(ofType: "_luxio._tcp.", inDomain: "local.")
-        do {
-            var request = URLRequest(url: URL(string: "https://api.luxio.lighting/devices")!); request.timeoutInterval = 7
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw LuxioError.message("Cloud discovery is unavailable. Local discovery is still running.") }
-            for light in try JSONDecoder().decode([Light].self, from: data) where !lights.contains(where: { $0.id == light.id }) { lights.append(light) }
-        } catch {
-            if !Task.isCancelled && !(error is CancellationError) && (error as? URLError)?.code != .cancelled {
-                self.error = error.localizedDescription
-            }
-        }
-        searching = false
-    }
-    func netServiceBrowser(_ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool) { services.append(service); service.delegate = self; service.resolve(withTimeout: 5) }
-    func netServiceDidResolveAddress(_ sender: NetService) {
-        guard let host = sender.hostName else { return }
-        let txt = sender.txtRecordData().map(NetService.dictionary(fromTXTRecord:)) ?? [:]
-        let id = txt["id"].flatMap { String(data: $0, encoding: .utf8) } ?? host
-        let light = Light(deviceId: id, name: sender.name, lan_ip: "\(host):\(sender.port)")
-        if let index = lights.firstIndex(where: { $0.id == id }) { lights[index] = light } else { lights.append(light) }
-    }
-}
-
 struct LightsView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var discovery = Discovery()
     @State private var manual = ""
     @State private var showAdd = false
+    @State private var selectedLight: Light?
+    @State private var powerStates: [String: Bool] = [:]
     var body: some View {
         NavigationStack {
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                                if discovery.lights.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                                if discovery.lights.isEmpty && !discovery.loading {
                                     VStack(spacing: 16) {
-                                        Image(systemName: "light.strip.fill").font(.system(size: 32))
-                                        Text(discovery.searching ? "Finding your lights…" : "Your lights live here").font(.headline)
-                                        Text("Connect to the same Wi-Fi as your Luxio light, or add its address.").font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                                        Button("Connect a light") { showAdd = true }.buttonStyle(.borderedProminent)
-                                    }.frame(maxWidth: .infinity).padding(28).background(tileColor, in: RoundedRectangle(cornerRadius: 16))
+                                        Image(systemName: "lightbulb.slash").font(.system(size: 32)).foregroundStyle(.white.opacity(0.7))
+                                            .frame(width: 76, height: 76).background(.white.opacity(0.06), in: Circle())
+                                        Text("No Luxio Devices Found").font(.title3.weight(.semibold))
+                                        Text("Power on Luxio nearby and enable Bluetooth, or connect it to the same Wi-Fi.")
+                                            .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                                        Button { showAdd = true } label: { Label("Add Luxio", systemImage: "plus") }
+                                            .buttonStyle(.bordered).tint(.white).padding(.top, 4)
+                                        Button {
+                                            Task { selectedLight = await discovery.addSimulator() }
+                                        } label: {
+                                            Text("Try the Simulator").font(.footnote).underline().foregroundStyle(.white.opacity(0.6))
+                                        }.buttonStyle(.plain).padding(.top, 4)
+                                    }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 32)
+                                        .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 20))
+                                        .accessibilityIdentifier("empty-lights")
                                 }
-                                ForEach(discovery.lights) { light in LightCard(light: light) }
-                            if discovery.lights.isEmpty, discovery.error != nil {
-                                Text("Local discovery is running. Pull down to try again.").font(.footnote).foregroundStyle(.secondary)
+                                ForEach(discovery.lights) { light in
+                                    if let client = discovery.clients[light.id] {
+                                        LightCard(light: light, client: client, discovery: discovery, on: powerStates[light.id] ?? client.state?.on ?? false) { selectedLight = light }.id(light.id + light.lan_ip)
+                                            .onReceive(client.$state.map { $0?.on ?? false }.removeDuplicates()) { on in
+                                                guard powerStates[light.id] != on else { return }
+                                                withAnimation(.smooth(duration: 0.35)) { powerStates[light.id] = on }
+                                            }
+                                    }
+                                }
+                                if discovery.loading {
+                                    if discovery.previousCount == 0 && discovery.lights.isEmpty {
+                                        ProgressView("Finding Luxio Devices").tint(.white).font(.subheadline)
+                                            .frame(maxWidth: .infinity).padding(.vertical, 48)
+                                    }
+                                    ForEach(0..<max(0, discovery.previousCount - discovery.lights.count), id: \.self) { index in
+                                        VStack(spacing: 20) {
+                                            HStack {
+                                                RoundedRectangle(cornerRadius: 5).fill(.white.opacity(0.1)).frame(width: 150, height: 18)
+                                                Spacer()
+                                                Capsule().fill(.white.opacity(0.08)).frame(width: 48, height: 28)
+                                            }
+                                            Capsule().fill(.white.opacity(0.06)).frame(height: 8)
+                                        }.padding(18).frame(maxWidth: .infinity)
+                                            .background(tileColor.opacity(0.6), in: RoundedRectangle(cornerRadius: 15))
+                                            .allowsHitTesting(false).accessibilityElement(children: .ignore)
+                                            .accessibilityLabel("Loading Luxio").accessibilityIdentifier("light-skeleton-\(index)")
+                                    }
+                                }
+                            if let status = discovery.bluetoothStatus {
+                                Text(status).font(.footnote).foregroundStyle(.secondary)
                             }
-                        }.padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 24)
-                    }.refreshable { await discovery.refresh() }
+                            if discovery.lights.isEmpty, discovery.error != nil {
+                                Text("Local discovery is still running.").font(.footnote).foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 24)
+                    }.refreshable { await discovery.refresh(includeCloud: true) }
+                    .navigationDestination(isPresented: Binding(get: { selectedLight != nil }, set: { if !$0 { selectedLight = nil } })) {
+                        if let light = selectedLight, let client = discovery.clients[light.id] {
+                            ControlView(light: light, client: client) {
+                                discovery.removeSimulator(); selectedLight = nil
+                            }
+                        }
+                    }
                     .navigationTitle("Luxio")
-                    .navigationBarTitleDisplayMode(.large)
+                    .toolbarTitleDisplayMode(.inlineLarge)
                     .toolbar(.visible, for: .navigationBar)
                     .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button { showAdd = true } label: { Image(systemName: "plus") }.tint(.white)
-                                .accessibilityLabel("Connect a light")
+                        if !discovery.lights.isEmpty {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button { showAdd = true } label: { Image(systemName: "plus") }.tint(.white)
+                                    .accessibilityLabel("Connect Luxio")
+                            }
                         }
                     }
                     .background(backdrop.ignoresSafeArea())
         }
-        .task { await discovery.refresh() }
-        .alert("Connect to a light", isPresented: $showAdd) {
+        .task {
+            await discovery.start()
+            while !Task.isCancelled {
+                if scenePhase == .active { await discovery.refresh() }
+                do { try await Task.sleep(for: .seconds(4)) } catch { break }
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in discovery.setBluetoothActive(phase == .active) }
+        .alert("Connect to Luxio", isPresented: $showAdd) {
             TextField("192.168.1.42", text: $manual).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
             Button("Connect") {
                 let address = manual.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !address.isEmpty && !discovery.lights.contains(where: { $0.lan_ip == address }) { discovery.lights.append(Light(deviceId: address, name: "Luxio", lan_ip: address)) }
+                if !address.isEmpty { Task { await discovery.add(Light(deviceId: address, name: "Luxio", lan_ip: address)) } }
             }
             Button("Cancel", role: .cancel) {}
         } message: { Text("Enter its local IP address or hostname.") }
@@ -159,21 +180,34 @@ struct BrightnessSlider: View {
 
 struct LightCard: View {
     let light: Light
-    @StateObject private var client: LightClient
+    @ObservedObject var client: LightClient
+    let discovery: Discovery
+    let on: Bool
+    let open: () -> Void
     @State private var level = 0.0
     @State private var editing = false
-    init(light: Light) { self.light = light; _client = StateObject(wrappedValue: LightClient(address: light.lan_ip)) }
     var body: some View {
-        let on = client.state?.on ?? false
         let ink: Color = on && client.state?.usesDarkForeground == true ? .black.opacity(0.85) : .white
         VStack(spacing: 0) {
             HStack(spacing: 14) {
-                NavigationLink { ControlView(light: light, client: client) } label: {
-                    HStack(spacing: 16) {
+                Button {
+                    guard client.state != nil, discovery.lights.contains(where: { $0.id == light.id && $0.lan_ip == light.lan_ip }) else { return }
+                    open()
+                } label: {
+                    HStack(spacing: 12) {
+                        if !client.isSimulator {
+                            Group {
+                                if client.usingBluetooth {
+                                    Image("Bluetooth").resizable().scaledToFit().frame(width: 12, height: 20)
+                                } else { Image(systemName: "wifi").font(.system(size: 17, weight: .medium)) }
+                            }.frame(width: 22).opacity(0.8).accessibilityHidden(true)
+                        }
                         Text(client.state?.name ?? light.name).font(.system(size: 18, weight: .semibold)).lineLimit(2).multilineTextAlignment(.leading)
                         Spacer(minLength: 0)
                     }.frame(minHeight: 48).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).disabled(client.state == nil)
+                    .accessibilityLabel(client.state?.name ?? light.name)
+                    .accessibilityValue(client.isSimulator ? "" : client.usingBluetooth ? "Connected via Bluetooth" : "Connected via Wi-Fi")
                 Toggle("Power", isOn: Binding(get: { on }, set: { value in Task { await client.power(value) } }))
                     .labelsHidden().tint(.black.opacity(0.25)).disabled(client.state == nil).accessibilityLabel("\(client.state?.name ?? light.name) power")
             }.padding(.horizontal, 18).padding(.top, 13)
@@ -182,26 +216,25 @@ struct LightCard: View {
                 if !active { Task { await client.brightness(Int(level)) } }
             }.padding(.horizontal, 14).padding(.top, 4).padding(.bottom, 8)
                 .opacity(on ? 1 : 0)
-                .frame(height: on ? 56 : 13, alignment: .top).clipped()
+                .frame(height: 56, alignment: .top)
                 .allowsHitTesting(on).accessibilityHidden(!on)
                 .accessibilityLabel("\(client.state?.name ?? light.name) brightness").accessibilityValue("\(Int(level / 256 * 100)) percent")
-            if client.error != nil { Text("Not reachable · tap to retry").font(.caption2).padding(.bottom, 10).foregroundStyle(ink.opacity(0.7)) }
         }
+        .fixedSize(horizontal: false, vertical: true)
         .foregroundStyle(ink)
         .background {
-            LiveLightBackdrop(client: client).clipShape(RoundedRectangle(cornerRadius: 15))
-                .overlay { if on { LinearGradient(colors: [.black.opacity(0.03), .black.opacity(client.state?.usesDarkForeground == true ? 0.22 : 0.48)], startPoint: .top, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 15)) } }
+            LiveLightBackdrop(client: client)
+                .overlay {
+                    LinearGradient(colors: [.black.opacity(0.03), .black.opacity(client.state?.usesDarkForeground == true ? 0.22 : 0.48)], startPoint: .top, endPoint: .bottom)
+                        .opacity(on ? 1 : 0)
+                }
         }
+        // Keep the contents at their expanded size and reveal the whole card together.
+        .frame(height: on ? 117 : 74, alignment: .top)
+        .clipShape(RoundedRectangle(cornerRadius: 15))
         .shadow(color: .black.opacity(0.2), radius: 8, y: 5)
-        .animation(.easeInOut(duration: 0.4), value: client.state?.previewChannels)
-        .animation(.smooth(duration: 0.35), value: on)
         .onChange(of: client.state?.brightness) { _, value in if !editing { level = Double(value ?? 16) } }
-        .task {
-            while !Task.isCancelled {
-                await client.refresh()
-                do { try await Task.sleep(for: .seconds(4)) } catch { break }
-            }
-        }
+        .onAppear { level = Double(client.state?.brightness ?? 16) }
     }
 }
 
@@ -209,6 +242,7 @@ struct ControlView: View {
     @Environment(\.dismiss) private var dismiss
     let light: Light
     @ObservedObject var client: LightClient
+    let removeSimulator: (() -> Void)?
     @State private var level = 0.0
     @State private var editing = false
     @State private var settings = false
@@ -216,8 +250,12 @@ struct ControlView: View {
     @State private var modeResolved = false
     @State private var editingColor = false
     @StateObject private var colorEditor: ColorEditor
-    init(light: Light, client: LightClient) {
-        self.light = light; self.client = client
+    init(light: Light, client: LightClient, removeSimulator: (() -> Void)? = nil) {
+        self.light = light; self.client = client; self.removeSimulator = removeSimulator
+        _level = State(initialValue: Double(client.state?.brightness ?? 16))
+        let reported = client.state?.mode ?? 0
+        _mode = State(initialValue: reported == 1 && client.state?.supportsGradients == true ? .gradient : reported == 2 ? .animation : .color)
+        _modeResolved = State(initialValue: client.state != nil)
         _colorEditor = StateObject(wrappedValue: ColorEditor(client: client))
     }
     var body: some View {
@@ -225,24 +263,48 @@ struct ControlView: View {
         let ink: Color = on && client.state?.usesDarkForeground == true ? .black.opacity(0.85) : .white
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
+                if client.usingBluetooth, client.state?.lanIP.isEmpty != false || client.state?.lanIP == "0.0.0.0" {
+                    NavigationLink {
+                        WifiSetupView(client: client)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "wifi").font(.title3)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Connect to Wi-Fi").font(.subheadline.weight(.semibold))
+                                Text(client.state?.supportsMatter == false ? "Control Luxio over your network." : "Control Luxio over your network and add it to Matter.")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                        }.foregroundStyle(.white).padding(16)
+                            .background(tileColor, in: RoundedRectangle(cornerRadius: 15))
+                    }.buttonStyle(.plain).padding(.horizontal, 16)
+                }
                 if mode != .animation {
                     ColorControls(client: client, editor: colorEditor, mode: mode, isSending: $editingColor).id("\(mode.rawValue)-\(client.state?.strip ?? "")")
                 }
-                SceneLibrary(client: client, editor: colorEditor, mode: mode).disabled(editingColor)
-                if let error = client.error { Text(error).font(.footnote).foregroundStyle(.red.opacity(0.9)).padding(.horizontal, 16) }
+                SceneLibrary(client: client, editor: colorEditor, mode: mode).allowsHitTesting(!editingColor)
+                if let error = client.error ?? (mode == .animation ? client.animationError : nil) {
+                    Text(error).font(.footnote).foregroundStyle(.red.opacity(0.9)).padding(.horizontal, 16)
+                        .accessibilityIdentifier("device-error")
+                }
             }.padding(.top, 28).padding(.bottom, 28)
-        }.refreshable { client.libraryRevision += 1; await client.refresh() }
+        }.refreshable {
+            let minimum = ContinuousClock.now.advanced(by: .milliseconds(500))
+            client.libraryRevision += 1; await client.refresh()
+            try? await Task.sleep(until: minimum, clock: .continuous)
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 BrightnessSlider(value: $level, ink: ink) { active in editing = active; if !active { Task { await client.brightness(Int(level)) } } }
                     .disabled(client.state == nil).padding(.horizontal, 20).padding(.bottom, 4).accessibilityLabel("Brightness").accessibilityValue("\(Int(level / 256 * 100)) percent")
-                let picker = Picker("Mode", selection: Binding(get: { mode }, set: { modeResolved = true; mode = $0 })) {
+                let picker = Picker("Mode", selection: Binding(get: { mode }, set: { if !editingColor { modeResolved = true; mode = $0 } })) {
                     ForEach(LightMode.allCases.filter { $0 != .gradient || client.state?.supportsGradients == true }) { item in
                         Text(item.rawValue).tag(item)
                     }
                 }.pickerStyle(.segmented).controlSize(.large).labelsHidden()
                     .frame(maxWidth: .infinity).frame(height: 48)
-                    .disabled(editingColor).accessibilityIdentifier("Light mode")
+                    .allowsHitTesting(!editingColor).accessibilityIdentifier("Light mode")
                 Group {
                     if #available(iOS 26.0, *) {
                         picker.glassEffect(.regular, in: .capsule)
@@ -259,7 +321,7 @@ struct ControlView: View {
                 .shadow(color: .black.opacity(0.2), radius: 12, y: 8)
         }
         .background(backdrop.ignoresSafeArea())
-        .navigationTitle(client.state?.name ?? light.name)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .background(InteractiveBackGesture().frame(width: 0, height: 0))
@@ -277,13 +339,19 @@ struct ControlView: View {
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("Back")
                 }.sharedBackgroundVisibility(.hidden)
+                ToolbarItem(placement: .topBarLeading) {
+                    Text(client.state?.name ?? light.name).font(.headline).lineLimit(1)
+                        .frame(maxWidth: 160, alignment: .leading).fixedSize(horizontal: true, vertical: false)
+                        .foregroundStyle(ink)
+                        .accessibilityIdentifier("device-title")
+                }.sharedBackgroundVisibility(.hidden)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { settings = true } label: {
                         Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(ink).frame(width: 31, height: 31)
                             .glassEffect(.regular.interactive(), in: .circle)
                             .frame(width: 44, height: 44).contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel("Light settings")
+                    }.buttonStyle(.plain).accessibilityLabel("Luxio settings")
                 }.sharedBackgroundVisibility(.hidden)
             } else {
                 ToolbarItem(placement: .topBarLeading) {
@@ -294,13 +362,19 @@ struct ControlView: View {
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("Back")
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Text(client.state?.name ?? light.name).font(.headline).lineLimit(1)
+                        .frame(maxWidth: 160, alignment: .leading).fixedSize(horizontal: true, vertical: false)
+                        .foregroundStyle(ink)
+                        .accessibilityIdentifier("device-title")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { settings = true } label: {
                         Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(ink).frame(width: 31, height: 31)
                             .background(.regularMaterial, in: Circle())
                             .frame(width: 44, height: 44).contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel("Light settings")
+                    }.buttonStyle(.plain).accessibilityLabel("Luxio settings")
                 }
             }
             if #available(iOS 26.0, *) {
@@ -330,7 +404,7 @@ struct ControlView: View {
                 do { try await Task.sleep(for: .seconds(4)) } catch { break }
             }
         }
-        .sheet(isPresented: $settings) { SettingsView(client: client) }
+        .sheet(isPresented: $settings) { SettingsView(client: client, removeSimulator: removeSimulator) }
     }
 }
 
@@ -512,9 +586,16 @@ struct SceneLibrary: View {
             .animation(.smooth(duration: 0.3), value: "\(client.state?.mode ?? 0)-\(client.state?.activeScript ?? "")-\(client.state?.scriptName ?? "")-\(client.state?.parameters.isEmpty ?? true)")
             Text("Saved").font(.headline).padding(.horizontal, 6).padding(.top, 16)
             if libraryLoaded && items.isEmpty {
-                Text(mode == .color ? "No saved colors yet." : gradient ? "No saved gradients yet." : "No saved animations yet.")
-                    .font(.subheadline).foregroundStyle(.white.opacity(0.55)).padding(.horizontal, 6)
-                    .accessibilityIdentifier("saved-empty-state")
+                Group {
+                    if mode == .animation {
+                        Text("No saved animations yet. To create your own animations, try [Luxio Studio](https://studio.luxio.lighting).")
+                            .tint(.white.opacity(0.75))
+                    } else {
+                        Text(mode == .color ? "No saved colors yet." : "No saved gradients yet.")
+                    }
+                }
+                .font(.subheadline).foregroundStyle(.white.opacity(0.55)).padding(.horizontal, 6)
+                .accessibilityIdentifier("saved-empty-state")
             }
             if items.count > 8 {
                 TextField("Search saved items", text: $search).padding(12).background(tileColor, in: RoundedRectangle(cornerRadius: 12))
@@ -611,11 +692,11 @@ struct SceneLibrary: View {
                         }.frame(maxWidth: .infinity).frame(height: 116).background(tileColor, in: RoundedRectangle(cornerRadius: 13))
                     }.buttonStyle(.plain).accessibilityIdentifier("save-preset")
                         .accessibilityLabel("Save")
-                        .disabled(editor.loading || editor.loadFailed || editor.sending || savingPreset || !busy.isEmpty)
+                        .disabled(editor.loading || editor.loadFailed || savingPreset || !busy.isEmpty).allowsHitTesting(!editor.sending)
                 }
             }.animation(.smooth(duration: 0.3), value: items.map(\.id))
                 .animation(.smooth(duration: 0.3), value: "\(client.state?.mode ?? 0)-\(client.state?.activeScript ?? "")-\(client.state?.parameters.isEmpty ?? true)")
-            if mode == .animation {
+            if mode == .animation && (!libraryLoaded || !items.isEmpty) {
                 Text("To create your own animations, try [Luxio Studio](https://studio.luxio.lighting).")
                     .font(.subheadline).foregroundStyle(.white.opacity(0.55)).tint(.white.opacity(0.75))
                     .padding(.horizontal, 6).padding(.top, 4)
@@ -768,17 +849,26 @@ struct SceneLibrary: View {
 
 struct SettingsView: View {
     @ObservedObject var client: LightClient
+    var removeSimulator: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var strip = "WS2805"
     @State private var count = "60"
     @State private var gpio = "16"
+    @State private var wifiEnabled = true
+    @State private var matterEnabled = true
+    @State private var confirmDisableWifi = false
+    @State private var relayEnabled = false
+    @State private var relayGPIO = "0"
+    @State private var relayInverted = false
     @State private var pairing = ""
     @State private var qr = ""
     @State private var copiedPairing = false
+    @State private var configureWifi = false
     @FocusState private var focusedField: String?
     @State private var saving = false
     @State private var checkingUpdate = false
+    @State private var upToDate = false
     @State private var availableBuild = 0
     @State private var installing = false
     @State private var confirmUpdate = false
@@ -787,9 +877,28 @@ struct SettingsView: View {
     var body: some View {
         let validCount = Int(count).map { (1...1024).contains($0) } ?? false
         let validGPIO = Int(gpio).map { (0...54).contains($0) } ?? false
+        let validRelayGPIO = !relayEnabled || (Int(relayGPIO).map { (0...54).contains($0) && $0 != Int(gpio) } ?? false)
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         NavigationStack {
             Form {
+                if !client.isSimulator {
+                    Section("Connection") {
+                        LabeledContent("Type") {
+                            HStack(spacing: 6) {
+                                if client.usingBluetooth {
+                                    Image("Bluetooth").resizable().scaledToFit().frame(width: 12, height: 20)
+                                } else {
+                                    Image(systemName: "wifi")
+                                }
+                                Text(client.usingBluetooth ? "Bluetooth" : "Wi-Fi")
+                            }.foregroundStyle(.secondary)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Connection type")
+                        .accessibilityValue(client.usingBluetooth ? "Bluetooth" : "Wi-Fi")
+                        .accessibilityIdentifier("connection-type")
+                    }.listRowBackground(tileColor)
+                }
                 Section {
                     HStack {
                         Text("Name")
@@ -797,26 +906,67 @@ struct SettingsView: View {
                         TextField("Name", text: $name).multilineTextAlignment(.trailing)
                             .focused($focusedField, equals: "name").accessibilityIdentifier("settings-name")
                     }
-                    Picker("Type", selection: $strip) { ForEach(["WS2805","WS2814","WS2812"], id: \.self) { Text($0) } }.tint(.white)
+                    Picker("Type", selection: $strip) { ForEach(["WS2805","WS2814","WS2812","SK6812"], id: \.self) { Text($0) } }.tint(.white).accessibilityIdentifier("settings-strip")
                     HStack {
                         Text("LED Count")
                         Spacer(minLength: 20)
                         TextField("1–1024", text: $count).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
                             .focused($focusedField, equals: "count").accessibilityLabel("LED Count").accessibilityIdentifier("settings-count")
                     }
+                    if !client.isSimulator {
                     HStack {
                         Text("Data Pin")
                         Spacer(minLength: 20)
                         TextField("0–54", text: $gpio).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
                             .focused($focusedField, equals: "gpio").accessibilityLabel("Data Pin").accessibilityIdentifier("settings-gpio")
                     }
-                } header: { Text("Settings") } footer: {
+                    }
+                } header: { Text("LED Strip") } footer: {
                     if !validCount { Text("LED Count must be between 1 and 1024.") }
                     else if !validGPIO { Text("Data Pin must be between 0 and 54.") }
                 }.listRowBackground(tileColor).disabled(saving || installing)
+                if !client.isSimulator {
+                Section {
+                    Toggle("Enable Relay", isOn: $relayEnabled).accessibilityIdentifier("settings-relay-enabled")
+                        .disabled((client.state?.build ?? 0) < 27)
+                    if relayEnabled {
+                        HStack {
+                            Text("Relay GPIO")
+                            Spacer(minLength: 20)
+                            TextField("0–54", text: $relayGPIO).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
+                                .focused($focusedField, equals: "relayGPIO").accessibilityLabel("Relay GPIO").accessibilityIdentifier("settings-relay-gpio")
+                        }
+                        Toggle("Invert Relay", isOn: $relayInverted).accessibilityIdentifier("settings-relay-inverted")
+                        Text("Enable inversion for a relay that switches on when its GPIO is low.").font(.footnote).foregroundStyle(.secondary)
+                    }
+                } header: { Text("Relay") } footer: {
+                    Text("A relay switches power to your LED strip, reducing standby power when the light is off. Enable this if your controller uses a relay to power its LEDs.")
+                    if !validRelayGPIO { Text("Relay GPIO must be between 0 and 54 and different from Data Pin.") }
+                    if (client.state?.build ?? 0) < 27 { Text("Relay settings require firmware build 27 or newer.") }
+                }.listRowBackground(tileColor).disabled(saving || installing)
+                Section {
+                    Toggle("Enable Wi-Fi", isOn: $wifiEnabled).accessibilityIdentifier("settings-wifi-enabled")
+                        .disabled((client.state?.build ?? 0) < 34 || saving || installing)
+                    if wifiEnabled {
+                    let ip = client.state?.lanIP ?? ""
+                    let connected = client.wifiStatus?.connected ?? (!ip.isEmpty && ip != "0.0.0.0")
+                    let ssid = client.wifiStatus?.ssid ?? ""
+                    let gateway = client.wifiStatus?.gateway ?? ""
+                    let dns = client.wifiStatus?.dns.joined(separator: ", ") ?? ""
+                    LabeledContent("SSID", value: connected ? (ssid.isEmpty ? "—" : ssid) : "Not connected")
+                    LabeledContent("IP Address", value: connected && !ip.isEmpty && ip != "0.0.0.0" ? ip : "—")
+                    LabeledContent("Gateway", value: connected && !gateway.isEmpty ? gateway : "—")
+                    LabeledContent("DNS", value: connected && !dns.isEmpty ? dns : "—")
+                    Button("Configure Wi-Fi") { configureWifi = true }.tint(accent).disabled(client.state?.wifiEnabled == false)
+                    }
+                } header: { Text("Wi-Fi") } footer: {
+                    Text("Changing this setting restarts Luxio. When disabled, Wi-Fi and its network services release their memory. Re-enable it using Bluetooth or USB; the saved network is retained.")
+                    if (client.state?.build ?? 0) < 34 { Text("Requires firmware build 34 or newer.") }
+                }.listRowBackground(tileColor)
+                .navigationDestination(isPresented: $configureWifi) { WifiSetupView(client: client) }
                 Section("Firmware") {
-                    Text("Build \(client.state?.build ?? 0)")
-                    Button(checkingUpdate ? "Checking…" : "Check for updates") { Task {
+                    LabeledContent("Build", value: String(client.state?.build ?? 0))
+                    Button { Task {
                         checkingUpdate = true; availableBuild = 0; updateStatus = ""
                         defer { checkingUpdate = false }
                         do {
@@ -829,17 +979,26 @@ struct SettingsView: View {
                             guard result.number(9) == 0 else { throw LuxioError.message("Update check timed out. Try again.") }
                             guard result.text(10).isEmpty else { throw LuxioError.message(result.text(10)) }
                             availableBuild = result.number(8)
-                            updateStatus = availableBuild > 0 ? "Build \(availableBuild) is available." : "You're up to date."
+                            if availableBuild > 0 { updateStatus = "Build \(availableBuild) is available." }
+                            else { upToDate = true }
                             client.error = nil
                         } catch { updateStatus = error.localizedDescription }
-                    } }.disabled(checkingUpdate || installing || client.state == nil)
+                    } } label: {
+                        HStack {
+                            if checkingUpdate { ProgressView().tint(.gray) }
+                            Text(checkingUpdate ? "Checking..." : "Check for Updates")
+                        }
+                    }.disabled(checkingUpdate || installing || client.state == nil)
                     if availableBuild > 0 {
                         Button("Install build \(availableBuild)") { confirmUpdate = true }.disabled(installing || checkingUpdate)
                     }
-                    if installing { ProgressView("Updating your light…") }
+                    if installing { ProgressView("Updating Luxio…") }
                     if !updateStatus.isEmpty { Text(updateStatus).font(.footnote) }
                     if let recoveryURL { Link("Open recovery", destination: recoveryURL) }
                 }.listRowBackground(tileColor)
+                .alert("Up to Date", isPresented: $upToDate) {
+                    Button("OK", role: .cancel) {}
+                } message: { Text("Your Luxio is running the latest firmware.") }
                 .confirmationDialog("Install firmware update?", isPresented: $confirmUpdate, titleVisibility: .visible) {
                     Button("Install update") { Task {
                         installing = true; let expectedBuild = availableBuild
@@ -847,7 +1006,7 @@ struct SettingsView: View {
                         let ip = client.state?.lanIP ?? ""
                         do {
                             _ = try await client.request(14)
-                            availableBuild = 0; updateStatus = "Keep your light powered on. Downloading and installing firmware…"
+                            availableBuild = 0; updateStatus = "Keep Luxio powered on. Downloading and installing firmware…"
                             recoveryURL = ip.isEmpty ? nil : URL(string: "http://\(ip)/")
                             for _ in 0..<150 {
                                 try await Task.sleep(for: .seconds(2))
@@ -860,18 +1019,24 @@ struct SettingsView: View {
                                        let status = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                                         if let error = status["error"] as? String, !error.isEmpty { updateStatus = error + " Open recovery to retry."; return }
                                         if let received = status["received"] as? Int, let size = status["size"] as? Int, size > 0 {
-                                            updateStatus = "Installing: \(received * 100 / size)% — keep your light powered on."
+                                            updateStatus = "Installing: \(received * 100 / size)% — keep Luxio powered on."
                                         }
                                     }
                                 }
                             }
-                            updateStatus = "The light has not reconnected yet. Open recovery to check its progress."
+                            updateStatus = "Luxio has not reconnected yet. Open recovery to check its progress."
                         } catch { updateStatus = error.localizedDescription }
                     } }
                     Button("Cancel", role: .cancel) {}
-                } message: { Text("Your light will be offline during the update. Keep it powered on until it reconnects.") }
-                Section("Matter") {
-                    Button("Show Pairing Code") { Task { do { let response = try await client.request(12); pairing = response.text(6); qr = response.text(7); client.error = nil } catch { client.error = error.localizedDescription } } }
+                } message: { Text("Luxio will be offline during the update. Keep it powered on until it reconnects.") }
+                if client.state?.supportsMatter != false {
+                Section {
+                    Toggle("Enable Matter", isOn: $matterEnabled).accessibilityIdentifier("settings-matter-enabled")
+                        .disabled((client.state?.build ?? 0) < 34 || saving || installing)
+                    if matterEnabled && wifiEnabled && client.state?.matterEnabled != false {
+                    Button { Task { do { let response = try await client.request(12); pairing = response.text(6); qr = response.text(7); client.error = nil } catch { client.error = error.localizedDescription } } } label: {
+                        Label("Show Pairing Code", systemImage: "matter.logo")
+                    }.tint(accent)
                     if !pairing.isEmpty {
                         VStack(spacing: 16) {
                             if !qr.isEmpty {
@@ -895,23 +1060,29 @@ struct SettingsView: View {
                             }
                         }.frame(maxWidth: .infinity).padding(.vertical, 12)
                     }
+                    }
+                } header: { Text("Matter") } footer: {
+                    Text("Matter connects Luxio to compatible smart home systems. It starts only when Wi-Fi is connected. Changing this setting restarts Luxio to release its memory; existing pairings are retained.")
+                    if (client.state?.build ?? 0) < 34 { Text("Requires firmware build 34 or newer.") }
                 }.listRowBackground(tileColor)
+                }
+                } else {
+                    Section("Simulator") {
+                        Text("A virtual Luxio device running on this iPhone.").font(.footnote).foregroundStyle(.secondary)
+                        Button("Remove Simulator", role: .destructive) { dismiss(); removeSimulator?() }
+                    }.listRowBackground(tileColor)
+                }
                 if let error = client.error { Section { Text(error).font(.footnote).foregroundStyle(.red) }.listRowBackground(tileColor) }
             }.scrollContentBackground(.hidden).background(backdrop).navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
                 .scrollDismissesKeyboard(.interactively)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            guard let ledCount = Int(count), (1...1024).contains(ledCount), let pin = Int(gpio), (0...54).contains(pin) else { return }
-                            focusedField = nil; saving = true
-                            Task {
-                                defer { saving = false }
-                                do {
-                                    var config = Proto(); config.string(1, trimmedName); config.string(2, strip); config.uint(3, UInt64(ledCount)); config.uint(4, UInt64(pin)); config.uint(5, UInt64(client.state?.channel ?? 0))
-                                    var payload = Proto(); payload.data(5, config.bytes)
-                                    _ = try await client.request(3, payload: payload); client.error = nil; dismiss()
-                                } catch { client.error = error.localizedDescription }
-                            }
+                            guard let ledCount = Int(count), (1...1024).contains(ledCount), let pin = Int(gpio), (0...54).contains(pin), validRelayGPIO else { return }
+                            focusedField = nil
+                            if !wifiEnabled && client.state?.wifiEnabled == true && !client.usingBluetooth && !client.isSimulator {
+                                confirmDisableWifi = true
+                            } else { saving = true }
                         } label: {
                             if saving {
                                 ProgressView().controlSize(.small).frame(width: 20, height: 20)
@@ -919,8 +1090,31 @@ struct SettingsView: View {
                                 Text("Save")
                             }
                         }.accessibilityLabel(saving ? "Saving" : "Save")
-                            .tint(.white).disabled(saving || installing || client.state == nil || trimmedName.isEmpty || trimmedName.utf8.count > 63 || !validCount || !validGPIO)
+                            .tint(.white).disabled(saving || installing || client.state == nil || trimmedName.isEmpty || trimmedName.utf8.count > 63 || !validCount || !validGPIO || !validRelayGPIO)
                     }
+                }
+                .task(id: saving) {
+                    guard saving, let ledCount = Int(count), let pin = Int(gpio) else { return }
+                    defer { saving = false }
+                    do {
+                        var config = Proto(); config.string(1, trimmedName); config.string(2, strip); config.uint(3, UInt64(ledCount)); config.uint(4, UInt64(pin)); config.uint(5, UInt64(client.state?.channel ?? 0))
+                        if !client.isSimulator && (client.state?.build ?? 0) >= 27 {
+                            var relay = Proto(); relay.uint(1, relayEnabled ? 1 : 0); relay.uint(2, relayEnabled ? UInt64(Int(relayGPIO)!) : 0); relay.uint(3, relayInverted ? 1 : 0)
+                            config.data(6, relay.bytes)
+                        }
+                        if !client.isSimulator && (client.state?.build ?? 0) >= 34 {
+                            var wifi = Proto(); wifi.uint(1, wifiEnabled ? 1 : 0); config.data(7, wifi.bytes)
+                            var matter = Proto(); matter.uint(1, matterEnabled ? 1 : 0); config.data(8, matter.bytes)
+                        }
+                        var payload = Proto(); payload.data(5, config.bytes)
+                        _ = try await client.request(3, payload: payload); client.error = nil; dismiss()
+                    } catch { client.error = error.localizedDescription }
+                }
+                .alert("Disable Wi-Fi?", isPresented: $confirmDisableWifi) {
+                    Button("Disable Wi-Fi", role: .destructive) { saving = true }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("You are connected over Wi-Fi. Saving will restart Luxio and disconnect this connection and Matter. You will need Bluetooth or USB to enable Wi-Fi again.")
                 }
                 .interactiveDismissDisabled(saving || installing)
                 .task(id: copiedPairing) {
@@ -930,7 +1124,7 @@ struct SettingsView: View {
                 }
         }.task {
             await client.refresh()
-            if let state = client.state { name = state.name; strip = state.strip; count = String(state.count); gpio = String(state.gpio) }
+            if let state = client.state { name = state.name; strip = state.strip; count = String(state.count); gpio = String(state.gpio); relayEnabled = state.relayEnabled; relayGPIO = String(state.relayGPIO); relayInverted = state.relayInverted; wifiEnabled = state.wifiEnabled; matterEnabled = state.matterEnabled }
         }
     }
 }
@@ -992,7 +1186,7 @@ struct AnimationParameterControls: View {
                         let defaults = parameters.map { parameter in var value = parameter; value.value = value.defaultValue; return value }
                         _ = await apply(defaults)
                     } }.buttonStyle(.bordered).frame(maxWidth: .infinity)
-                    Text("Settings are saved on this device for this light and animation.")
+                    Text("Settings are saved on this device for this Luxio and animation.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(24).disabled(busy)
             }.navigationTitle(title).navigationBarTitleDisplayMode(.inline)

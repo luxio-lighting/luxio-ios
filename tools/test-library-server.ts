@@ -62,9 +62,32 @@ fixtures.set('/rename/api', renameDevice);
 const wifiDevice = new Device('wifi-fixture'); wifiDevice.state.config.name = 'Library test'; wifiDevice.state.lanIp = '';
 let wifiConnected = false;
 let updateCheckUntil = 0;
+const updateDevices = new Map<string, { device: Device; started: number }>();
+for (const path of ['/update-install', '/update-error']) {
+  const device = new Device(path); device.state.config.name = 'Library test'; device.state.build = 34;
+  device.state.lanIp = `127.0.0.1:${process.env.LUXIO_UI_TEST_PORT ?? 8082}${path}`;
+  updateDevices.set(path, { device, started: 0 });
+}
 createServer(async (request, response) => {
+  const updatePath = request.url?.replace(/\/(api|status)$/, '');
+  const update = updateDevices.get(updatePath ?? '');
+  if (update && request.url?.endsWith('/status')) {
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify({ build: 35, received: Date.now() - update.started < 8000 ? 25 : 100, size: 100,
+      error: updatePath === '/update-error' ? 'Firmware signature verification failed' : '' })); return;
+  }
   const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
   const input = decodeRequest(Buffer.concat(chunks));
+  if (update) {
+    if (input.operation === 13) { update.started = 0; update.device.state.build = 34; }
+    if (input.operation === 14) {
+      if (update.started) { response.end(encodeResponse({ id: input.id, error: 'Duplicate installation request' })); return; }
+      update.started = Date.now();
+    }
+    if (update.started && Date.now() - update.started >= 20000 && updatePath !== '/update-error') update.device.state.build = 35;
+    response.setHeader('Content-Type', 'application/x-protobuf');
+    response.end(encodeResponse({ ...update.device.handle({ id: input.id, operation: 0 }), availableBuild: 35 })); return;
+  }
   if (request.url === '/updates/api') {
     if (input.operation === 13) updateCheckUntil = Date.now() + 6000;
     response.setHeader('Content-Type', 'application/x-protobuf');

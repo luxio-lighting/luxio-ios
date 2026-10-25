@@ -847,6 +847,114 @@ struct SceneLibrary: View {
     }
 }
 
+struct FirmwareUpdateView: View {
+    @ObservedObject var client: LightClient
+    let build: Int
+    @Binding var installing: Bool
+    @Environment(\.dismiss) private var dismiss
+    @State private var complete = false
+    @State private var progress: Double?
+    @State private var status = "Preparing Luxio…"
+    @State private var error: String?
+    @State private var recoveryURL: URL?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(spacing: 16) {
+                        Image(systemName: complete ? "checkmark.circle.fill" : error != nil ? "exclamationmark.circle" : "arrow.down.circle")
+                            .font(.system(size: 42, weight: .medium))
+                            .foregroundStyle(complete ? Color.green : error != nil ? Color.orange : Color.accentColor)
+                            .accessibilityHidden(true)
+                        VStack(spacing: 8) {
+                            Text(complete ? "Update Installed" : error != nil ? "Update Interrupted" : installing ? "Installing Update" : "Update Available")
+                                .font(.title2.bold())
+                            Text(complete ? "Luxio is now running build \(build)." : installing ? "Keep Luxio powered on while the update installs." : error != nil ? "Keep Luxio powered on. Check its connection or open recovery to continue." : "Build \(build) is ready to install. Luxio will briefly go offline during the update.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if installing {
+                            VStack(spacing: 12) {
+                                if let progress {
+                                    ProgressView(value: progress).accessibilityLabel("Update progress")
+                                        .accessibilityValue("\(Int(progress * 100)) percent")
+                                    Text("\(Int(progress * 100))% downloaded").monospacedDigit()
+                                        .accessibilityIdentifier("update-progress")
+                                } else {
+                                    ProgressView().accessibilityLabel("Installing firmware")
+                                }
+                                Text(status).font(.subheadline).foregroundStyle(.secondary)
+                                    .accessibilityIdentifier("update-status")
+                            }.padding(.top, 8)
+                        }
+                    }.multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.vertical, 20)
+                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+                if let error {
+                    Section {
+                        Label(error, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.red)
+                        if let recoveryURL { Link("Open Recovery", destination: recoveryURL) }
+                    }
+                }
+            }
+            .navigationTitle("Firmware Update").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if !installing && !complete && error == nil {
+                    ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !installing {
+                    Button {
+                        if complete || error != nil { dismiss() }
+                        else { installing = true }
+                    } label: {
+                        Text(complete ? "Done" : error != nil ? "Close" : "Install")
+                            .fontWeight(.semibold).frame(maxWidth: .infinity).padding(.vertical, 5)
+                    }.buttonStyle(.borderedProminent).controlSize(.large)
+                        .accessibilityIdentifier(complete ? "update-done" : error != nil ? "update-close" : "update-install")
+                        .padding(.horizontal, 20).padding(.vertical, 12).background(.bar)
+                }
+            }
+        }
+        .interactiveDismissDisabled(installing)
+        .task(id: installing) {
+            guard installing else { return }
+            defer { installing = false }
+            let ip = client.state?.lanIP ?? ""
+            recoveryURL = ip.isEmpty || ip == "0.0.0.0" ? nil : URL(string: "http://\(ip)/")
+            do {
+                _ = try await client.request(14)
+                status = "Waiting for Luxio to restart…"
+                let deadline = ContinuousClock.now.advanced(by: .seconds(300))
+                while ContinuousClock.now < deadline {
+                    try await Task.sleep(for: .seconds(2))
+                    if let url = recoveryURL?.appendingPathComponent("status") {
+                        var request = URLRequest(url: url); request.timeoutInterval = 3
+                        if let (data, response) = try? await URLSession.shared.data(for: request),
+                           (response as? HTTPURLResponse)?.statusCode == 200,
+                           let state = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           state["build"] as? Int == build {
+                            if let failure = state["error"] as? String, !failure.isEmpty { throw LuxioError.message(failure) }
+                            if let received = state["received"] as? Int, let size = state["size"] as? Int, size > 0 {
+                                progress = min(1, max(0, Double(received) / Double(size)))
+                                status = received >= size ? "Verifying firmware and restarting Luxio…" : "Downloading firmware…"
+                            }
+                        }
+                    }
+                    if let result = try? await client.request(0, timeout: 2), try result.message(3).number(2) == build {
+                        complete = true; client.error = nil; return
+                    }
+                    try Task.checkCancellation()
+                }
+                error = "Luxio has not reconnected yet. The update may still be running."
+            } catch {
+                if !Task.isCancelled { self.error = error.localizedDescription }
+            }
+        }
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var client: LightClient
     var removeSimulator: (() -> Void)? = nil
@@ -871,9 +979,8 @@ struct SettingsView: View {
     @State private var upToDate = false
     @State private var availableBuild = 0
     @State private var installing = false
-    @State private var confirmUpdate = false
+    @State private var showUpdate = false
     @State private var updateStatus = ""
-    @State private var recoveryURL: URL?
     var body: some View {
         let validCount = Int(count).map { (1...1024).contains($0) } ?? false
         let validGPIO = Int(gpio).map { (0...54).contains($0) } ?? false
@@ -979,7 +1086,7 @@ struct SettingsView: View {
                             guard result.number(9) == 0 else { throw LuxioError.message("Update check timed out. Try again.") }
                             guard result.text(10).isEmpty else { throw LuxioError.message(result.text(10)) }
                             availableBuild = result.number(8)
-                            if availableBuild > 0 { updateStatus = "Build \(availableBuild) is available." }
+                            if availableBuild > 0 { showUpdate = true }
                             else { upToDate = true }
                             client.error = nil
                         } catch { updateStatus = error.localizedDescription }
@@ -990,45 +1097,13 @@ struct SettingsView: View {
                         }
                     }.disabled(checkingUpdate || installing || client.state == nil)
                     if availableBuild > 0 {
-                        Button("Install build \(availableBuild)") { confirmUpdate = true }.disabled(installing || checkingUpdate)
+                        Button("Update Available") { showUpdate = true }.disabled(installing || checkingUpdate)
                     }
-                    if installing { ProgressView("Updating Luxio…") }
-                    if !updateStatus.isEmpty { Text(updateStatus).font(.footnote) }
-                    if let recoveryURL { Link("Open recovery", destination: recoveryURL) }
+                    if !updateStatus.isEmpty { Text(updateStatus).font(.footnote).foregroundStyle(.red) }
                 }.listRowBackground(tileColor)
                 .alert("Up to Date", isPresented: $upToDate) {
                     Button("OK", role: .cancel) {}
                 } message: { Text("Your Luxio is running the latest firmware.") }
-                .confirmationDialog("Install firmware update?", isPresented: $confirmUpdate, titleVisibility: .visible) {
-                    Button("Install update") { Task {
-                        installing = true; let expectedBuild = availableBuild
-                        defer { installing = false }
-                        let ip = client.state?.lanIP ?? ""
-                        do {
-                            _ = try await client.request(14)
-                            availableBuild = 0; updateStatus = "Keep Luxio powered on. Downloading and installing firmware…"
-                            recoveryURL = ip.isEmpty ? nil : URL(string: "http://\(ip)/")
-                            for _ in 0..<150 {
-                                try await Task.sleep(for: .seconds(2))
-                                if let result = try? await client.request(0), try result.message(3).number(2) == expectedBuild {
-                                    updateStatus = "Build \(expectedBuild) installed."; recoveryURL = nil; client.error = nil; return
-                                }
-                                if let url = recoveryURL?.appendingPathComponent("status") {
-                                    var request = URLRequest(url: url); request.timeoutInterval = 3
-                                    if let (data, _) = try? await URLSession.shared.data(for: request),
-                                       let status = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                                        if let error = status["error"] as? String, !error.isEmpty { updateStatus = error + " Open recovery to retry."; return }
-                                        if let received = status["received"] as? Int, let size = status["size"] as? Int, size > 0 {
-                                            updateStatus = "Installing: \(received * 100 / size)% — keep Luxio powered on."
-                                        }
-                                    }
-                                }
-                            }
-                            updateStatus = "Luxio has not reconnected yet. Open recovery to check its progress."
-                        } catch { updateStatus = error.localizedDescription }
-                    } }
-                    Button("Cancel", role: .cancel) {}
-                } message: { Text("Luxio will be offline during the update. Keep it powered on until it reconnects.") }
                 if client.state?.supportsMatter != false {
                 Section {
                     Toggle("Enable Matter", isOn: $matterEnabled).accessibilityIdentifier("settings-matter-enabled")
@@ -1122,6 +1197,11 @@ struct SettingsView: View {
                     try? await Task.sleep(for: .seconds(2))
                     copiedPairing = false
                 }
+        }.sheet(isPresented: $showUpdate, onDismiss: {
+            if (client.state?.build ?? 0) >= availableBuild { availableBuild = 0 }
+        }) {
+            FirmwareUpdateView(client: client, build: availableBuild, installing: $installing)
+                .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
         }.task {
             await client.refresh()
             if let state = client.state { name = state.name; strip = state.strip; count = String(state.count); gpio = String(state.gpio); relayEnabled = state.relayEnabled; relayGPIO = String(state.relayGPIO); relayInverted = state.relayInverted; wifiEnabled = state.wifiEnabled; matterEnabled = state.matterEnabled }

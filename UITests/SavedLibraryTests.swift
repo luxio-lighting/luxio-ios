@@ -463,6 +463,53 @@ final class SavedLibraryTests: XCTestCase {
         waitForExpectations(timeout: 10)
     }
 
+    func testFirmwareUpdateSheet() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/update-install"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        app.buttons["Luxio settings"].tap()
+        let check = app.buttons["Check for Updates"]
+        for _ in 0..<5 where !check.isHittable { app.swipeUp() }
+        check.tap()
+        XCTAssertTrue(app.buttons["update-install"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Update Available"].exists)
+        let available = XCTAttachment(screenshot: app.screenshot()); available.name = "Update available sheet"; available.lifetime = .keepAlways; add(available)
+        app.buttons["Cancel"].tap()
+        app.buttons["Update Available"].tap()
+        app.buttons["update-install"].tap()
+        XCTAssertTrue(app.staticTexts["Installing Update"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["update-install"].exists)
+        XCTAssertTrue(app.staticTexts["25% downloaded"].waitForExistence(timeout: 8))
+        let progress = XCTAttachment(screenshot: app.screenshot()); progress.name = "Update progress sheet"; progress.lifetime = .keepAlways; add(progress)
+        XCTAssertTrue(app.staticTexts["100% downloaded"].waitForExistence(timeout: 12))
+        XCTAssertFalse(app.buttons["update-done"].exists, "Download completion must not claim installation succeeded before reconnection")
+        XCTAssertTrue(app.buttons["update-done"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["Luxio is now running build 35."].exists)
+        app.buttons["update-done"].tap()
+        XCTAssertFalse(app.buttons["Update Available"].exists)
+    }
+
+    func testFirmwareUpdateFailureInSheet() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/update-error"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        app.buttons["Luxio settings"].tap()
+        let check = app.buttons["Check for Updates"]
+        for _ in 0..<5 where !check.isHittable { app.swipeUp() }
+        check.tap()
+        XCTAssertTrue(app.buttons["update-install"].waitForExistence(timeout: 10)); app.buttons["update-install"].tap()
+        XCTAssertTrue(app.staticTexts["Firmware signature verification failed"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.links["Open Recovery"].exists)
+        XCTAssertFalse(app.buttons["update-done"].exists)
+        XCTAssertTrue(app.buttons["update-close"].exists)
+        let failure = XCTAttachment(screenshot: app.screenshot()); failure.name = "Update failure sheet"; failure.lifetime = .keepAlways; add(failure)
+        app.buttons["update-close"].tap()
+    }
+
     func testFirmwareUpdateCheck() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-luxio.simulator.enabled", "NO"]

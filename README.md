@@ -9,7 +9,7 @@ xcodebuild -project Luxio.xcodeproj -scheme Luxio -sdk iphoneos -configuration D
   DEVELOPMENT_TEAM=YOUR_TEAM -allowProvisioningUpdates build
 ```
 
-Firmware updates are in each light's settings. Checking does not install. Installation requires a separate tap, explains the offline period, and offers the recovery page if the download fails. There are no automatic installs.
+Firmware updates are in each light's settings. An available update opens a sheet with an Install button, matching Wi-Fi setup. The same sheet shows download progress, waits for the device to reconnect on the expected build before confirming success, and offers recovery when installation fails. Checking does not install; there are no automatic installs.
 
 Discovery starts with local mDNS (`_luxio._tcp`). If startup mDNS finds no reachable Luxio, discovery falls back to the cloud device list. Manually pulling down the home list also queries the cloud; background polling stays local. Candidates must answer a local state request before appearing; background local checks remove unreachable devices and bring them back when they recover. Opening a card uses its cached address and state immediately. Startup placeholders use the last discovered device count, and both pull-to-refresh controls remain active for at least 500 ms.
 

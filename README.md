@@ -60,6 +60,8 @@ and is illustrative: randomness and accumulated state are not frame-synchronized
 with the physical strip. Swatches retain the app's full-brightness presentation.
 `npm run test:animation` checks output, parameters, sandboxing, and resource limits.
 
+Candle uses warm-white LEDs on RGBCCT strips, dedicated white with an amber RGB tint on RGBW strips (including SK6812), and RGB on RGB-only strips or older firmware without color-capability reporting. Switch to another animation and back to Candle to replace a currently running older preset; saved copies remain unchanged.
+
 Animation presets include preview palettes and live parameters. `Slider` and `Checkbox` declarations require firmware build 21 or newer; `Number` selects a numeric input. Older firmware parameter metadata continues to display numeric values as sliders. `Boolean` remains a legacy alias for `Checkbox`.
 
 ## Virtual device

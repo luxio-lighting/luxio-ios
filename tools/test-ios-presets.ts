@@ -24,7 +24,7 @@ for (const preset of presets) {
     }
   }
   for (const count of [1, 60, 1024]) {
-    for (const strip of ['WS2805', 'WS2814', 'WS2812']) {
+    for (const strip of ['WS2805', 'WS2814', 'WS2812', 'SK6812']) {
       const device = new Device('preset'); device.state.config.ledCount = count; device.state.config.stripType = strip as 'WS2805'; device.state.brightness = 256;
       let animation: Animation | undefined;
       if (preset.isGradient) {
@@ -35,7 +35,13 @@ for (const preset of presets) {
       const first = structuredClone(animation?.tick(0) ?? device.output());
       const later = structuredClone(animation?.tick(5000) ?? device.output());
       for (const pixel of later) {
-        assert.equal(pixel.white + pixel.warmWhite + pixel.coolWhite, 0, 'RGB presets must not mix white channels');
+        if (preset.name === 'Candle' && strip === 'WS2805') {
+          assert.ok(pixel.warmWhite > 0, 'Candle must use warm white on RGBCCT');
+          assert.equal(pixel.red + pixel.green + pixel.blue + pixel.white + pixel.coolWhite, 0);
+        } else if (preset.name === 'Candle' && ['WS2814', 'SK6812'].includes(strip)) {
+          assert.ok(pixel.white > 0 && pixel.red > pixel.green && pixel.green > 0, 'RGBW candle must mix dedicated white with an amber tint');
+          assert.equal(pixel.blue + pixel.warmWhite + pixel.coolWhite, 0);
+        } else assert.equal(pixel.white + pixel.warmWhite + pixel.coolWhite, 0, 'RGB presets must not mix white channels');
         for (const value of Object.values(pixel)) assert.ok(Number.isInteger(value) && value >= 0 && value <= 255);
       }
       if (preset.isGradient) {
@@ -57,10 +63,15 @@ for (const preset of presets) {
           for (const p of pixels) {
             assert.ok(Object.values(p).every(v => Number.isInteger(v) && v >= 0 && v <= 255));
             if (preset.name === 'Knight Rider') assert.equal(p.green + p.blue, 0);
-            if (['Christmas', 'Fireplace', 'Candle'].includes(preset.name)) assert.ok(p.red > p.green && p.green >= p.blue);
+            if (['Christmas', 'Fireplace'].includes(preset.name) || (preset.name === 'Candle' && strip !== 'WS2805')) assert.ok(p.red > p.green && p.green >= p.blue);
+            if (preset.name === 'Candle' && strip === 'WS2805') assert.ok(p.warmWhite > 0 && p.coolWhite === 0 && p.red + p.green + p.blue + p.white === 0);
+            if (preset.name === 'Candle' && ['WS2814', 'SK6812'].includes(strip)) assert.ok(p.white > 0 && p.warmWhite + p.coolWhite === 0);
           }
           if (preset.name === 'Christmas' && count > 1) assert.ok(new Set(pixels.map(p => p.red)).size > 1, 'Twinkles must vary independently across the strip');
-          if (preset.name === 'Candle') assert.ok(Math.max(...pixels.map(p => p.red)) - Math.min(...pixels.map(p => p.red)) <= 11, 'A candle should flicker gently as one flame');
+          if (preset.name === 'Candle') {
+            const intensity = pixels.map(p => p.red + p.white + p.warmWhite);
+            assert.ok(Math.max(...intensity) - Math.min(...intensity) <= 12, 'A candle should flicker gently as one flame');
+          }
         }
         assert.ok(frames.size > 1, `${preset.name} must animate, even with one pixel`);
       }
@@ -69,3 +80,10 @@ for (const preset of presets) {
   }
   console.log(`PASS: ${preset.name}, 1/60/1024 pixels, all strip types`);
 }
+
+const candle = presets.find(p => p.name === 'Candle')!;
+const rgb = new Animation(candle.source, 60, 'WS2812');
+const legacy = new Animation(candle.source.replace('local color_type =', 'luxio_get_color_type = nil\nlocal color_type ='), 60, 'WS2812');
+for (const elapsed of [0, 173, 5000, 10000]) assert.deepEqual(legacy.tick(elapsed), rgb.tick(elapsed), 'Older firmware must retain the RGB fallback');
+rgb.close(); legacy.close();
+console.log('PASS: Candle RGB fallback without color-capability API');

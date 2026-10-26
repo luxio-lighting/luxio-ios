@@ -51,7 +51,7 @@ import SwiftUI
                         _ = try await client.request(17, payload: payload)
                     }
                     error = nil; client.error = nil
-                } catch { self.error = error.localizedDescription }
+                } catch { client.report(error, action: snapshot.count == 1 ? "Change color" : "Change gradient") }
             }
         }
     }
@@ -133,12 +133,7 @@ struct ColorControls: View {
 
                 }.disabled(editor.loading || editor.loadFailed || client.state == nil)
                 }
-                if let error = editor.error {
-                    VStack(spacing: 8) {
-                        Text(error).font(.footnote).foregroundStyle(.red)
-                        Button("Retry") { if editor.loadFailed { Task { await editor.load(mode: mode) } } else { editor.apply() } }.disabled(editor.sending)
-                    }.padding(.horizontal, 24)
-                }
+
         }.padding(.bottom, 8).frame(maxWidth: 500).frame(maxWidth: .infinity)
             .foregroundStyle(.white)
             .task(id: "\(client.state?.activeGradient ?? "")-\(client.state?.activeColor ?? "")") { if !editor.sending && !editor.dragging { await editor.load(mode: mode) } }

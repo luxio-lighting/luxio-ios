@@ -243,6 +243,37 @@ final class SavedLibraryTests: XCTestCase {
         XCTAssertTrue(app.buttons["Try the Simulator"].waitForExistence(timeout: 5))
     }
 
+    func testActionErrorsUseToasts() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/action-errors"
+        app.launch()
+        let card = app.buttons["Library test"]
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        XCTAssertFalse(app.otherElements["action-toast"].exists)
+        let originalY = card.frame.minY
+        app.switches["Library test power"].tap()
+        XCTAssertTrue(app.staticTexts["Library test · Change power"].waitForExistence(timeout: 3))
+        XCTAssertEqual(card.frame.minY, originalY, accuracy: 1)
+        let home = XCTAttachment(screenshot: app.screenshot()); home.name = "Home action toast"; home.lifetime = .keepAlways; add(home)
+        let disappears = NSPredicate(format: "exists == false")
+        expectation(for: disappears, evaluatedWith: app.otherElements["action-toast"])
+        waitForExpectations(timeout: 9)
+        card.tap()
+        XCTAssertTrue(app.segmentedControls["Light mode"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Background library timeout"].exists)
+        XCTAssertFalse(app.otherElements["action-toast"].exists)
+        app.switches["Power"].tap()
+        XCTAssertTrue(app.staticTexts["Library test · Change power"].waitForExistence(timeout: 3))
+        app.buttons["Dismiss notification"].tap()
+        XCTAssertFalse(app.otherElements["action-toast"].exists)
+        app.buttons["Luxio settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].buttons["Save"].waitForExistence(timeout: 5))
+        app.navigationBars["Settings"].buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Library test · Save settings"].waitForExistence(timeout: 3))
+        let settings = XCTAttachment(screenshot: app.screenshot()); settings.name = "Settings action toast"; settings.lifetime = .keepAlways; add(settings)
+    }
+
     func testHomeSkeletonsAndEmptyState() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-lastDiscoveredLightCount", "3"]

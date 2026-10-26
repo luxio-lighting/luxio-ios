@@ -49,6 +49,23 @@ final class RefreshProtocol: URLProtocol {
         client.error = nil
         await client.refresh()
         precondition(client.error == URLError(.timedOut).localizedDescription, "Real network errors must still be visible")
+        precondition(client.failure == nil, "Background polling must never create a toast")
+        await client.refresh(userInitiated: true)
+        precondition(client.failure?.title == "luxio-refresh.test · Refresh")
+        let refreshFailure = client.failure?.id
+        await client.power(true)
+        precondition(client.failure?.title == "luxio-refresh.test · Change power" && client.failure?.id != refreshFailure)
+        let firstFailure = client.failure?.id
+        await client.power(true)
+        precondition(client.failure?.id != firstFailure, "Repeating an action must create a fresh toast")
+        client.failure = nil
+        RefreshProtocol.failure = URLError(.cancelled)
+        await client.power(false)
+        await client.color([255, 0, 0, 0, 0, 0])
+        await client.brightness(16)
+        await client.refresh(userInitiated: true)
+        precondition(client.failure == nil, "Cancelled actions must stay silent")
+        RefreshProtocol.failure = URLError(.timedOut)
         for previous in [nil, client.error] {
             client.error = previous
             let refresh = Task { await client.refresh() }
@@ -67,6 +84,6 @@ final class RefreshProtocol: URLProtocol {
         RefreshProtocol.animationError = ""
         await client.refresh()
         precondition(client.animationError == nil, "A cleared firmware error must disappear")
-        print("PASS: refresh ignores task and URL cancellation, preserves real failures, and clears errors on success")
+        print("PASS: refresh ignores task and URL cancellation, keeps background errors silent, reports action failures, and clears errors on success")
     }
 }

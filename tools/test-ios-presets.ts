@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { Device } from '../shared/device/src/device.js';
 import { colorSchema } from '../shared/protocol/src/index.js';
@@ -81,9 +81,20 @@ for (const preset of presets) {
   console.log(`PASS: ${preset.name}, 1/60/1024 pixels, all strip types`);
 }
 
-const candle = presets.find(p => p.name === 'Candle')!;
-const rgb = new Animation(candle.source, 60, 'WS2812');
-const legacy = new Animation(candle.source.replace('local color_type =', 'luxio_get_color_type = nil\nlocal color_type ='), 60, 'WS2812');
-for (const elapsed of [0, 173, 5000, 10000]) assert.deepEqual(legacy.tick(elapsed), rgb.tick(elapsed), 'Older firmware must retain the RGB fallback');
-rgb.close(); legacy.close();
-console.log('PASS: Candle RGB fallback without color-capability API');
+
+const reference = JSON.parse(readFileSync(new URL('./fixtures/animation-presets-reference.json', import.meta.url), 'utf8'));
+for (const preset of presets.filter(p => !p.isGradient)) {
+  assert.ok(!/(?:if|and) luxio_(?:fill|render_waves)|luxio_get_color_type and/.test(preset.source), 'Current presets must require the new API directly');
+  const original = reference.find((p: {name: string}) => p.name === preset.name).source;
+  for (const count of [1, 100, 1024]) for (const strip of ['WS2812','WS2814','WS2805','SK6812']) {
+    const current = new Animation(preset.source, count, strip);
+    const expected = new Animation(original, count, strip);
+    for (const milliseconds of [0, 33, 1000, 10000]) {
+      const a = current.tick(milliseconds), b = expected.tick(milliseconds);
+      for (let i=0;i<count;i++) for (const c of ['red','green','blue','white','warmWhite','coolWhite'] as const)
+        assert.equal(a[i][c],b[i][c], `${preset.name}: removing compatibility changed output`);
+    }
+    current.close(); expected.close();
+  }
+}
+console.log('PASS: current presets match the measured optimized paths on all strip types');

@@ -39,6 +39,7 @@
 		A7B2F05EFF2DC05581E973B0 /* lutf8lib.c in Sources */ = {isa = PBXBuildFile; fileRef = D8A2FCA8688093E174981451 /* lutf8lib.c */; };
 		ACD6933146FFA0786F6D533E /* AnimationRuntime.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C4CC4EF5D25FB32DEFE7AD6 /* AnimationRuntime.c */; };
 		B01A70BDAD0F2A9056663AA0 /* lcode.c in Sources */ = {isa = PBXBuildFile; fileRef = CE039FA569D6FD5EEA6E1CBF /* lcode.c */; };
+		B34782E919D709449F7EB5F1 /* ActionToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 425482EF6B81CC5D3448E45E /* ActionToast.swift */; };
 		BBBA4BA83886B15EA6DCD508 /* lopcodes.c in Sources */ = {isa = PBXBuildFile; fileRef = FE8FD2E8B3BF344B027F2E4B /* lopcodes.c */; };
 		C9F0626178F7F0C661BEE348 /* llex.c in Sources */ = {isa = PBXBuildFile; fileRef = D7945C37CAA049A9F36B82A7 /* llex.c */; };
 		D234FDDDD6663922651CDA54 /* lauxlib.c in Sources */ = {isa = PBXBuildFile; fileRef = F1106A6A5D3F9B2E2FF81B2F /* lauxlib.c */; };
@@ -75,6 +76,7 @@
 		33D615100F9B2FB28089597F /* lapi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lapi.h; sourceTree = "<group>"; };
 		3A6414CA5C02827F448C3F31 /* lundump.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lundump.h; sourceTree = "<group>"; };
 		3D384970AE45BE4C62255BCC /* Gradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gradient.swift; sourceTree = "<group>"; };
+		425482EF6B81CC5D3448E45E /* ActionToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionToast.swift; sourceTree = "<group>"; };
 		44D20D7244AE7BCE58E0F49C /* ltm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ltm.h; sourceTree = "<group>"; };
 		44EFDE9FE4CCB35799C69816 /* SavedLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedLibraryTests.swift; sourceTree = "<group>"; };
 		47D9191D2C4CC72C85838517 /* Bluetooth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bluetooth.swift; sourceTree = "<group>"; };
@@ -239,6 +241,7 @@
 		EA9785521510FFC30481315E /* Luxio */ = {
 			isa = PBXGroup;
 			children = (
+				425482EF6B81CC5D3448E45E /* ActionToast.swift */,
 				C6BFB4E4E04A6858BBE209B5 /* AnimationPreview.swift */,
 				2315EEFCF5FCD15B93C217C1 /* Assets.xcassets */,
 				47D9191D2C4CC72C85838517 /* Bluetooth.swift */,
@@ -361,6 +364,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B34782E919D709449F7EB5F1 /* ActionToast.swift in Sources */,
 				D585CA0007C9658AD4EB7526 /* AnimationPreview.swift in Sources */,
 				ACD6933146FFA0786F6D533E /* AnimationRuntime.c in Sources */,
 				57391BF2A3D605A1C09D81A1 /* Bluetooth.swift in Sources */,
@@ -488,13 +492,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 56;
 				INFOPLIST_FILE = Luxio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.54;
+				MARKETING_VERSION = 0.1.55;
 				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.app;
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "Luxio/Luxio-Bridging-Header.h";
@@ -524,13 +528,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 56;
 				INFOPLIST_FILE = Luxio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.54;
+				MARKETING_VERSION = 0.1.55;
 				PRODUCT_BUNDLE_IDENTIFIER = lighting.luxio.app;
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "Luxio/Luxio-Bridging-Header.h";

@@ -170,10 +170,18 @@ struct LightState {
         let color = try fields.message(5); channels = (1...6).map { color.number($0) }
     }
 }
+struct ActionFailure: Identifiable {
+    let id = UUID()
+    let createdAt = Date()
+    let title: String
+    let message: String
+}
+
 @MainActor final class LightClient: ObservableObject {
     @Published var state: LightState?
     @Published var wifiStatus: WifiStatus?
     @Published var error: String?
+    @Published var failure: ActionFailure?
     @Published var animationError: String?
     @Published var lastBrightness = 16
     @Published var libraryRevision = 0
@@ -311,30 +319,35 @@ struct LightState {
         }
         return fields
     }
-    func refresh() async {
+    func report(_ error: Error, action: String) {
+        guard !Task.isCancelled, !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
+        failure = ActionFailure(title: "\(state?.name ?? address) · \(action)", message: error.localizedDescription)
+    }
+    func refresh(userInitiated: Bool = false) async {
         do { _ = try await request(0); error = nil }
         catch {
             // SwiftUI cancels refresh and polling tasks as views change.
             if !Task.isCancelled && !(error is CancellationError) && (error as? URLError)?.code != .cancelled {
                 self.error = error.localizedDescription
+                if userInitiated { report(error, action: "Refresh") }
             }
         }
     }
     func color(_ channels: [Int]) async {
         var color = Proto(); for (i, value) in channels.enumerated() { color.uint(i + 1, UInt64(value)) }
         var payload = Proto(); payload.data(3, color.bytes)
-        do { _ = try await request(1, payload: payload); error = nil } catch { self.error = error.localizedDescription }
+        do { _ = try await request(1, payload: payload); error = nil } catch { report(error, action: "Change color") }
     }
     func power(_ on: Bool) async {
         var payload = Proto()
         let modern = (state?.build ?? 11) >= 11
         if modern { payload.uint(10, on ? 1 : 0) }
         else { payload.uint(4, on ? UInt64(max(1, Int((Double(lastBrightness) * 255 / 256).rounded()))) : 0) }
-        do { _ = try await request(modern ? 15 : 2, payload: payload); error = nil } catch { self.error = error.localizedDescription }
+        do { _ = try await request(modern ? 15 : 2, payload: payload); error = nil } catch { report(error, action: "Change power") }
     }
     func brightness(_ level: Int) async {
-        guard (1...256).contains(level) else { error = "Brightness must be 1–256"; return }
+        guard (1...256).contains(level) else { report(LuxioError.message("Brightness must be 1–256"), action: "Change brightness"); return }
         var payload = Proto(); payload.uint(4, UInt64((state?.build ?? 11) >= 11 ? level : max(1, Int((Double(level) * 255 / 256).rounded()))))
-        do { _ = try await request(2, payload: payload); error = nil } catch { self.error = error.localizedDescription }
+        do { _ = try await request(2, payload: payload); error = nil } catch { report(error, action: "Change brightness") }
     }
 }

@@ -107,6 +107,12 @@ createServer(async (request, response) => {
     response.setHeader('Content-Type', 'application/x-protobuf');
     response.end(encodeResponse({ ...result, networkStatus: { connected: wifiConnected, ssid: wifiConnected ? 'Test Network' : '', gateway: wifiConnected ? '192.0.2.1' : '', dns: wifiConnected ? ['192.0.2.1'] : [] } })); return;
   }
+  if (request.url === '/action-errors/api') {
+    response.setHeader('Content-Type', 'application/x-protobuf');
+    response.end(encodeResponse(input.operation === 0 ? settingsDevice.handle(input) : {
+      id: input.id, error: [5, 18, 25].includes(input.operation) ? 'Background library timeout' : 'Test connection timed out'
+    })); return;
+  }
   if (request.url === '/unreachable/api') {
     await new Promise(resolve => setTimeout(resolve, 2500));
     response.writeHead(503); response.end(); return;

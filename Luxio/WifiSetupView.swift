@@ -115,13 +115,10 @@ struct WifiSetupView: View {
                     }
                     if ssid.utf8.count > 32 { Text("The network name must be 32 bytes or fewer.").font(.footnote).foregroundStyle(.red) }
                 }
-                if let error {
-                    Section {
-                        Label(error, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.red)
-                    }
-                }
+
             }
         }
+        .modifier(ActionToast(failure: $client.failure))
         .tint(Color.accentColor)
         .navigationTitle("Wi-Fi").navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.interactively)
@@ -181,7 +178,7 @@ struct WifiSetupView: View {
                     password = ""; showPassword = false
                 }
             } catch {
-                if !Task.isCancelled { self.error = error.localizedDescription }
+                if !Task.isCancelled { self.error = error.localizedDescription; client.report(error, action: operation == "scan" ? "Find Wi-Fi networks" : "Connect to Wi-Fi") }
             }
             if !Task.isCancelled { action = "" }
         }

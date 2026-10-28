@@ -1,0 +1,20 @@
+--- a/Luxio/LuxioApp.swift
++++ b/Luxio/LuxioApp.swift
+@@ -289,7 +289,7 @@
+                     HStack(spacing: 12) {
+                         if !client.isSimulator {
+                             Group {
+-                                if client.usingBluetooth {
++                                if client.usingBluetooth || (ProcessInfo.processInfo.environment["LUXIO_MARKETING_BLUETOOTH_NAME"] == client.state?.name && client.state?.name != nil) {
+                                     Image("Bluetooth").resizable().scaledToFit().frame(width: 12, height: 20)
+                                 } else { Image(systemName: "wifi").font(.system(size: 17, weight: .medium)) }
+                             }.frame(width: 22).opacity(0.8).accessibilityHidden(true)
+@@ -1082,7 +1082,7 @@
+                     Section("Connection") {
+                         LabeledContent("Type") {
+                             HStack(spacing: 6) {
+-                                if client.usingBluetooth {
++                                if client.usingBluetooth || (ProcessInfo.processInfo.environment["LUXIO_MARKETING_BLUETOOTH_NAME"] == client.state?.name && client.state?.name != nil) {
+                                     Image("Bluetooth").resizable().scaledToFit().frame(width: 12, height: 20)
+                                 } else {
+                                     Image(systemName: "wifi")

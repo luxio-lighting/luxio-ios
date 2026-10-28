@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "locale": "en-US",
+  "status": "Approved screenshots uploaded, processed, placed and ordered",
+  "iphoneSizes": [
+    "6.3",
+    "6.9"
+  ],
+  "screenshotsPerSize": 5,
+  "ipad": "Existing tablet screenshots retained",
+  "submittedForReview": true
+}

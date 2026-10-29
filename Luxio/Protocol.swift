@@ -117,6 +117,7 @@ struct WifiStatus {
     }
 }
 struct LightState {
+    var supportedStripTypes: [String] = []
     var deviceId = ""
     var animationRevision = 0
     var animationPreview: [[Int]] = []
@@ -147,6 +148,7 @@ struct LightState {
     }
     init() {}
     init(_ fields: [Int: [Data]]) throws {
+        supportedStripTypes = (fields[19] ?? []).compactMap { String(data: $0, encoding: .utf8) }.filter { !$0.isEmpty }
         deviceId = fields.text(1)
         animationPreview = try (fields[15] ?? []).map { data in
             let color = try Proto.decode(data); return (1...6).map { color.number($0) }

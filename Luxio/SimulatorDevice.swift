@@ -2,6 +2,7 @@ import Foundation
 
 // Local device API: the normal app controls and Lua previews use this without HTTP.
 final class SimulatorDevice {
+    static let supportedStripTypes = ["WS2805", "WS2814", "WS2812", "SK6812", "WS2811", "WS2813", "WS2815"]
     var state = LightState()
     private var libraries: [Int: [Data]] = [0: [], 1: [], 2: []]
     private var animation: Data?
@@ -11,11 +12,12 @@ final class SimulatorDevice {
         state.build = 21; state.lanIP = "simulator"; state.mode = 0; state.on = true
         state.channels = [0, 210, 255, 0, 0, 0]
         if let saved, let fields = try? Proto.decode(saved), let restored = try? LightState(fields.message(3)),
-           restored.deviceId == state.deviceId, ["WS2805", "WS2814", "WS2812", "SK6812"].contains(restored.strip), (1...1024).contains(restored.count) {
+           restored.deviceId == state.deviceId, Self.supportedStripTypes.contains(restored.strip), (1...1024).contains(restored.count) {
             state = restored
             libraries = [0: fields[18] ?? [], 1: fields[15] ?? [], 2: fields[4] ?? []]
             animation = fields[5]?.first
         }
+        state.supportedStripTypes = Self.supportedStripTypes
     }
 
     var snapshot: Proto {
@@ -26,6 +28,7 @@ final class SimulatorDevice {
         current.uint(8, UInt64(state.mode ?? 0)); current.uint(9, state.on ? 1 : 0)
         current.string(10, state.activeGradient); current.string(12, state.activeColor); current.string(13, state.scriptName)
         current.uint(16, UInt64(state.animationRevision))
+        for type in Self.supportedStripTypes { current.string(19, type) }
         var color = Proto(); for (index, value) in state.channels.enumerated() { color.uint(index + 1, UInt64(value)) }; current.data(5, color.bytes)
         if let fields = state.gradient {
             var gradient = Proto(); gradient.string(1, fields.text(1)); gradient.string(2, fields.text(2))
@@ -65,7 +68,7 @@ final class SimulatorDevice {
         case 15: state.on = input.number(10) != 0
         case 3:
             let config = try input.message(5); let name = config.text(1).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !name.isEmpty, name.utf8.count <= 63, ["WS2805", "WS2814", "WS2812", "SK6812"].contains(config.text(2)), (1...1024).contains(config.number(3)) else { throw LuxioError.message("Invalid simulator settings") }
+            guard !name.isEmpty, name.utf8.count <= 63, Self.supportedStripTypes.contains(config.text(2)), (1...1024).contains(config.number(3)) else { throw LuxioError.message("Invalid simulator settings") }
             if state.strip != config.text(2) || state.count != config.number(3) {
                 state.channels = [Int](repeating: 0, count: 6); state.mode = 0
                 state.activeColor = ""; state.activeGradient = ""; state.activeScript = ""; state.scriptName = ""

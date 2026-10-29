@@ -46,6 +46,7 @@ import Foundation
         var onFields = try decoded.message(3); onFields[9] = try Proto.decode(extra.bytes)[9]
         let poweredState = try LightState(onFields)
         precondition(poweredState.on)
+        precondition(state.supportedStripTypes == ["WS2811", "WS2813", "WS2815", "FUTURE"])
         precondition(state.channels == [255, 0, 0, 0, 17, 129])
         do { _ = try Proto.decode(Data([0x1a, 0xff])); fatalError("Malformed length accepted") }
         catch { /* Expected: truncated varint must be rejected. */ }

@@ -1073,8 +1073,8 @@ struct SettingsView: View {
     @State private var showUpdate = false
     var body: some View {
         let validCount = Int(count).map { (1...1024).contains($0) } ?? false
-        let validGPIO = Int(gpio).map { (0...54).contains($0) } ?? false
-        let validRelayGPIO = !relayEnabled || (Int(relayGPIO).map { (0...54).contains($0) && $0 != Int(gpio) } ?? false)
+        let validGPIO = Int(gpio).map { (0...61).contains($0) } ?? false
+        let validRelayGPIO = !relayEnabled || (Int(relayGPIO).map { (0...61).contains($0) && $0 != Int(gpio) } ?? false)
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         NavigationStack {
             Form {
@@ -1103,7 +1103,7 @@ struct SettingsView: View {
                         TextField("Name", text: $name).multilineTextAlignment(.trailing)
                             .focused($focusedField, equals: "name").accessibilityIdentifier("settings-name")
                     }
-                    Picker("Type", selection: $strip) { ForEach(["WS2805","WS2814","WS2812","SK6812"], id: \.self) { Text($0) } }.tint(.white).accessibilityIdentifier("settings-strip")
+                    Picker("Type", selection: $strip) { ForEach(client.state?.supportedStripTypes.isEmpty == false ? client.state!.supportedStripTypes : [strip], id: \.self) { Text($0) } }.tint(.white).accessibilityIdentifier("settings-strip")
                     HStack {
                         Text("LED Count")
                         Spacer(minLength: 20)
@@ -1114,13 +1114,13 @@ struct SettingsView: View {
                     HStack {
                         Text("Data Pin")
                         Spacer(minLength: 20)
-                        TextField("0–54", text: $gpio).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
+                        TextField("0–61", text: $gpio).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
                             .focused($focusedField, equals: "gpio").accessibilityLabel("Data Pin").accessibilityIdentifier("settings-gpio")
                     }
                     }
                 } header: { Text("LED Strip") } footer: {
                     if !validCount { Text("LED Count must be between 1 and 1024.") }
-                    else if !validGPIO { Text("Data Pin must be between 0 and 54.") }
+                    else if !validGPIO { Text("Data Pin must be between 0 and 61.") }
                 }.listRowBackground(tileColor).disabled(saving || installing)
                 if !client.isSimulator {
                 Section {
@@ -1130,7 +1130,7 @@ struct SettingsView: View {
                         HStack {
                             Text("Relay GPIO")
                             Spacer(minLength: 20)
-                            TextField("0–54", text: $relayGPIO).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
+                            TextField("0–61", text: $relayGPIO).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
                                 .focused($focusedField, equals: "relayGPIO").accessibilityLabel("Relay GPIO").accessibilityIdentifier("settings-relay-gpio")
                         }
                         Toggle("Invert Relay", isOn: $relayInverted).accessibilityIdentifier("settings-relay-inverted")
@@ -1138,7 +1138,7 @@ struct SettingsView: View {
                     }
                 } header: { Text("Relay") } footer: {
                     Text("A relay switches power to your LED strip, reducing standby power when the light is off. Enable this if your controller uses a relay to power its LEDs.")
-                    if !validRelayGPIO { Text("Relay GPIO must be between 0 and 54 and different from Data Pin.") }
+                    if !validRelayGPIO { Text("Relay GPIO must be between 0 and 61 and different from Data Pin.") }
                     if (client.state?.build ?? 0) < 27 { Text("Relay settings require firmware build 27 or newer.") }
                 }.listRowBackground(tileColor).disabled(saving || installing)
                 Section {
@@ -1243,7 +1243,7 @@ struct SettingsView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            guard let ledCount = Int(count), (1...1024).contains(ledCount), let pin = Int(gpio), (0...54).contains(pin), validRelayGPIO else { return }
+                            guard let ledCount = Int(count), (1...1024).contains(ledCount), let pin = Int(gpio), (0...61).contains(pin), validRelayGPIO else { return }
                             focusedField = nil
                             if !wifiEnabled && client.state?.wifiEnabled == true && !client.usingBluetooth && !client.isSimulator {
                                 confirmDisableWifi = true

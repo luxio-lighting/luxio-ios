@@ -25,6 +25,17 @@ final class NoNetworkProtocol: URLProtocol {
         let light = await discovery.addSimulator()
         let client = discovery.clients[light.id]!
         precondition(client.isSimulator && client.state!.count == 60 && client.state!.supportsWhiteTemperature)
+        precondition(client.state!.supportedStripTypes == SimulatorDevice.supportedStripTypes)
+        let rgbSimulator = SimulatorDevice()
+        for type in ["WS2811", "WS2813", "WS2815"] {
+            var config = Proto(); config.string(1, "RGB Test"); config.string(2, type); config.uint(3, 60)
+            var payload = Proto(); payload.data(5, config.bytes)
+            _ = try rgbSimulator.request(3, payload: payload)
+            precondition(!rgbSimulator.state.supportsWhite && !rgbSimulator.state.supportsWhiteTemperature)
+            var white = Proto(); white.uint(4, 255); payload = Proto(); payload.data(3, white.bytes)
+            do { _ = try rgbSimulator.request(1, payload: payload); fatalError("RGB strip accepted white") }
+            catch { /* Expected. */ }
+        }
         var dim = Proto(); dim.uint(4, 16); _ = try await client.request(2, payload: dim)
         var off = Proto(); off.uint(10, 0); _ = try await client.request(15, payload: off)
         precondition(client.state!.brightness == 16 && !client.state!.on)

@@ -11,9 +11,12 @@
     "unitTests": "passed",
     "privacyManifestIncluded": true
   },
-  "appStoreExport": "pending",
-  "submissionStatus": "Preparing authorized App Review submission",
+  "appStoreExport": "succeeded",
+  "submissionStatus": "WAITING_FOR_REVIEW",
   "ipa": ".sdk/releases/app-store-1.1.0/Luxio.ipa",
-  "binaryUploaded": false,
-  "buildAttached": false
+  "binaryUploaded": true,
+  "buildAttached": true,
+  "binaryProcessingState": "VALID",
+  "deliveryId": "197fcdf0-87d7-41db-bfcb-e12b605e991f",
+  "ipaSHA256": "07fe9d893bb0777ffdb37133ca69517d18364956353f12e1d1b1cbc8b4b0b3e8"
 }

@@ -2,19 +2,19 @@
   "appId": "6828093615",
   "sku": "luxio-ios",
   "version": "1.1.0",
-  "appStoreState": "PREPARING",
+  "appStoreState": "WAITING_FOR_REVIEW",
   "releaseType": "AFTER_APPROVAL",
   "metadataUploaded": true,
   "screenshots": {
     "iphone": "Five approved marketing screenshots each for 6.3-inch and 6.9-inch",
     "ipad": "Existing three tablet screenshots retained"
   },
-  "binaryUploaded": false,
-  "reviewSubmitted": false,
+  "binaryUploaded": true,
+  "reviewSubmitted": true,
   "signingBlocker": null,
   "appStoreExport": "succeeded",
-  "submissionStatus": "Preparing authorized App Review submission",
-  "buildAttached": false,
+  "submissionStatus": "WAITING_FOR_REVIEW",
+  "buildAttached": true,
   "build": "59",
   "pricing": "Free",
   "availableTerritories": 175,
@@ -22,5 +22,10 @@
   "ageRatingComplete": true,
   "contentRightsComplete": true,
   "blockers": [],
-  "privacyPublished": true
+  "privacyPublished": true,
+  "versionId": "2e0da699-1154-4ce9-ba8f-566ce717ec88",
+  "buildId": "197fcdf0-87d7-41db-bfcb-e12b605e991f",
+  "reviewSubmissionId": "58d1ab9a-3d66-45ad-b5c1-e7d7ac244fdb",
+  "binaryProcessingState": "VALID",
+  "checkedAt": "2026-11-07T21:03:44.130991+00:00"
 }

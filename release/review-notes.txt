@@ -1,0 +1,11 @@
+No account or login is required.
+
+Without hardware: open Luxio, allow discovery to finish, and tap “Try the Simulator” in the empty state. If devices are already listed, tap + and choose “Try the Simulator” in the Add a Luxio sheet. This opens a local RGBCCT virtual device. Test Color, Gradient and Animation, brightness, saving and renaming presets, and settings. No purchase or external accessory is needed for the Simulator.
+
+Real-device features require compatible Luxio hardware. Local-network and Bluetooth permissions enable discovery and control. Nearby Bluetooth devices are listed without connecting; tapping a Bluetooth card initiates connection and iOS pairing when needed. Wi-Fi credentials are sent to the selected controller for setup. Firmware updates and Matter pairing require supported physical hardware and are intentionally unavailable in the Simulator.
+
+Animations use a bundled Lua interpreter restricted to lighting output. Scripts define LED colors and timing; they cannot access the OS, files, network, load native code or alter the app UI. Runtime memory, instruction and time budgets apply. The app previews the same animation shown by the controller.
+
+The app uses local HTTP to talk to devices on a user's LAN; the public discovery and firmware API uses HTTPS.
+
+Version 1.1.0 updates the Add a Luxio sheet, empty state and loading skeletons. The Simulator is session-only and disappears when the app is terminated. Manual IP entry has been removed; hardware is discovered through Bonjour, the cloud directory and Bluetooth.

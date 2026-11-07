@@ -1,0 +1,19 @@
+{
+  "bundleId": "lighting.luxio",
+  "version": "1.1.0",
+  "build": "59",
+  "archive": ".sdk/releases/Luxio-1.1.0.xcarchive",
+  "validation": {
+    "typecheck": "passed",
+    "relevantUiTests": "passed",
+    "archive": "passed",
+    "codesignVerification": "passed",
+    "unitTests": "passed",
+    "privacyManifestIncluded": true
+  },
+  "appStoreExport": "pending",
+  "submissionStatus": "Preparing authorized App Review submission",
+  "ipa": ".sdk/releases/app-store-1.1.0/Luxio.ipa",
+  "binaryUploaded": false,
+  "buildAttached": false
+}

@@ -24,35 +24,56 @@ extension LightState {
 
 struct LightsView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var discovery = Discovery()
     @State private var showAdd = false
     @State private var selectedLight: Light?
+    @State private var connectingBluetooth: String?
     @State private var powerStates: [String: Bool] = [:]
     @State private var failure: ActionFailure?
     var body: some View {
         NavigationStack {
+            GeometryReader { geometry in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
                                 if discovery.lights.isEmpty && !discovery.loading {
-                                    VStack(spacing: 16) {
-                                        Image(systemName: "lightbulb.slash").font(.system(size: 32)).foregroundStyle(.white.opacity(0.7))
-                                            .frame(width: 76, height: 76).background(.white.opacity(0.06), in: Circle())
+                                    VStack(spacing: 12) {
+                                        Image("LuxioLogo").resizable().scaledToFit()
+                                            .frame(width: 64, height: 64).accessibilityHidden(true)
                                         Text("No Luxio Devices Found").font(.title3.weight(.semibold))
                                         Text("Power on Luxio nearby and enable Bluetooth, or connect it to the same Wi-Fi.")
                                             .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                                        Button { showAdd = true } label: { Label("Add Luxio", systemImage: "plus") }
-                                            .buttonStyle(.bordered).tint(.white).padding(.top, 4)
-                                        Button {
-                                            Task { selectedLight = await discovery.addSimulator() }
-                                        } label: {
-                                            Text("Try the Simulator").font(.footnote).underline().foregroundStyle(.white.opacity(0.6))
+                                        Button { showAdd = true } label: {
+                                            Label("Add a Luxio", systemImage: "plus").font(.body.weight(.semibold))
+                                                .foregroundStyle(.white).frame(maxWidth: .infinity).padding(.vertical, 16)
+                                                .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 20))
                                         }.buttonStyle(.plain).padding(.top, 4)
-                                    }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 32)
+                                    }.frame(maxWidth: .infinity).padding(.horizontal, 20).padding(.vertical, 24)
                                         .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 20))
-                                        .accessibilityIdentifier("empty-lights")
+                                        .accessibilityElement(children: .contain).accessibilityIdentifier("empty-lights")
+                                    Button {
+                                        Task { selectedLight = await discovery.addSimulator() }
+                                    } label: {
+                                        Text("Try the Simulator").font(.footnote).underline().foregroundStyle(.white.opacity(0.6))
+                                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                    }.buttonStyle(.plain)
                                 }
                                 ForEach(discovery.lights) { light in
-                                    if let client = discovery.clients[light.id] {
+                                    if let client = discovery.clients[light.id], client.state == nil, light.lan_ip.hasPrefix("ble://") {
+                                        Button { connectingBluetooth = light.id } label: {
+                                            HStack(spacing: 14) {
+                                                Image("Bluetooth").resizable().scaledToFit().frame(width: 12, height: 20)
+                                                    .frame(width: 22).opacity(0.8).accessibilityHidden(true)
+                                                Text(light.name).font(.system(size: 18, weight: .semibold)).multilineTextAlignment(.leading)
+                                                Spacer(minLength: 0)
+                                                if connectingBluetooth == light.id { ProgressView().tint(.white) }
+                                                else { Image(systemName: "chevron.right").font(.subheadline).foregroundStyle(.secondary) }
+                                            }.foregroundStyle(.white).padding(.horizontal, 18).frame(minHeight: 74)
+                                                .frame(maxWidth: .infinity).background(tileColor, in: RoundedRectangle(cornerRadius: 15))
+                                        }.buttonStyle(.plain).disabled(connectingBluetooth != nil)
+                                            .accessibilityLabel(light.name).accessibilityValue(connectingBluetooth == light.id ? "Connecting via Bluetooth" : "Nearby via Bluetooth. Tap to connect.")
+                                            .accessibilityIdentifier("connect-bluetooth-" + light.id)
+                                    } else if let client = discovery.clients[light.id] {
                                         LightCard(light: light, client: client, discovery: discovery, on: powerStates[light.id] ?? client.state?.on ?? false) { selectedLight = light }.id(light.id + light.lan_ip)
                                             .onReceive(client.$failure.compactMap { $0 }) { if $0.createdAt.timeIntervalSinceNow > -6 { failure = $0 } }
                                             .onReceive(client.$state.map { $0?.on ?? false }.removeDuplicates()) { on in
@@ -62,11 +83,7 @@ struct LightsView: View {
                                     }
                                 }
                                 if discovery.loading {
-                                    if discovery.previousCount == 0 && discovery.lights.isEmpty {
-                                        ProgressView("Finding Luxio Devices").tint(.white).font(.subheadline)
-                                            .frame(maxWidth: .infinity).padding(.vertical, 48)
-                                    }
-                                    ForEach(0..<max(0, discovery.previousCount - discovery.lights.count), id: \.self) { index in
+                                    ForEach(0..<max(0, (discovery.previousCount > 0 ? discovery.previousCount : 3) - discovery.lights.count), id: \.self) { index in
                                         VStack(spacing: 20) {
                                             HStack {
                                                 RoundedRectangle(cornerRadius: 5).fill(.white.opacity(0.1)).frame(width: 150, height: 18)
@@ -76,6 +93,18 @@ struct LightsView: View {
                                             Capsule().fill(.white.opacity(0.06)).frame(height: 8)
                                         }.padding(18).frame(maxWidth: .infinity)
                                             .background(tileColor.opacity(0.6), in: RoundedRectangle(cornerRadius: 15))
+                                            .overlay {
+                                                if !reduceMotion {
+                                                    GeometryReader { bounds in
+                                                        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: scenePhase != .active)) { context in
+                                                            let progress = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.8) / 1.8
+                                                            LinearGradient(colors: [.clear, .white.opacity(0.1), .clear], startPoint: .leading, endPoint: .trailing)
+                                                                .frame(width: bounds.size.width * 0.45)
+                                                                .offset(x: bounds.size.width * (progress * 1.45 - 0.45))
+                                                        }
+                                                    }.clipShape(RoundedRectangle(cornerRadius: 15))
+                                                }
+                                            }
                                             .allowsHitTesting(false).accessibilityElement(children: .ignore)
                                             .accessibilityLabel("Loading Luxio").accessibilityIdentifier("light-skeleton-\(index)")
                                     }
@@ -83,12 +112,15 @@ struct LightsView: View {
 
                         }
                         .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 24)
+                        .frame(minHeight: geometry.size.height, alignment: discovery.lights.isEmpty && !discovery.loading ? .center : .top)
+                        .accessibilityElement(children: .contain).accessibilityIdentifier("lights-list")
                     }.refreshable {
                         await discovery.refresh(includeCloud: true)
                         if !Task.isCancelled, let error = discovery.error {
                             failure = ActionFailure(title: "Find Luxio devices", message: error)
                         }
                     }
+            }
                     .modifier(ActionToast(failure: $failure))
                     .navigationDestination(isPresented: Binding(get: { selectedLight != nil }, set: { if !$0 { selectedLight = nil } })) {
                         if let light = selectedLight, let client = discovery.clients[light.id] {
@@ -101,9 +133,11 @@ struct LightsView: View {
                     .toolbarTitleDisplayMode(.inlineLarge)
                     .toolbar(.visible, for: .navigationBar)
                     .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button { showAdd = true } label: { Image(systemName: "plus") }.tint(.white)
-                                .accessibilityLabel("Add Device").accessibilityIdentifier("add-luxio")
+                        if !discovery.lights.isEmpty {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button { showAdd = true } label: { Image(systemName: "plus") }.tint(.white)
+                                    .accessibilityLabel("Add Device").accessibilityIdentifier("add-luxio")
+                            }
                         }
                     }
                     .background(backdrop.ignoresSafeArea())
@@ -115,7 +149,19 @@ struct LightsView: View {
                 do { try await Task.sleep(for: .seconds(4)) } catch { break }
             }
         }
+        .task(id: connectingBluetooth) {
+            guard let id = connectingBluetooth else { return }
+            defer { connectingBluetooth = nil }
+            guard let light = discovery.lights.first(where: { $0.id == id }) else { return }
+            do { selectedLight = try await discovery.connectBluetooth(light) }
+            catch {
+                if !Task.isCancelled && !(error is CancellationError) {
+                    failure = ActionFailure(title: "Connect to \(light.name)", message: error.localizedDescription)
+                }
+            }
+        }
         .onChange(of: scenePhase) { _, phase in discovery.setBluetoothActive(phase == .active) }
+        .sensoryFeedback(.impact(weight: .light), trigger: showAdd) { _, presented in presented }
         .sheet(isPresented: $showAdd) {
             AddLuxioView(discovery: discovery) { light in
                 showAdd = false; selectedLight = light
@@ -128,88 +174,57 @@ struct AddLuxioView: View {
     @ObservedObject var discovery: Discovery
     var onAdded: (Light) -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var address = ""
-    @State private var connecting = false
     @State private var addingVirtual = false
-    @State private var failure: ActionFailure?
-    @FocusState private var addressFocused: Bool
 
     var body: some View {
-        let host = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        NavigationStack {
-            Form {
-                Section {
-                    VStack(spacing: 16) {
-                        Image(systemName: "lightbulb.led.fill")
-                            .font(.system(size: 42, weight: .medium)).foregroundStyle(Color.accentColor)
-                            .accessibilityHidden(true)
-                        VStack(spacing: 8) {
-                            Text("Create your own Luxio").font(.title2.bold())
-                            Text("Turn an ESP32 and an LED strip into your own smart light. Our guide will help you get started.")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Link(destination: URL(string: "https://luxio.lighting/")!) {
-                            HStack {
-                                Text("View the Guide").fontWeight(.semibold)
-                                Image(systemName: "arrow.up.right").font(.subheadline.weight(.semibold))
-                            }.frame(maxWidth: .infinity).padding(.vertical, 5)
-                        }.buttonStyle(.borderedProminent).controlSize(.large)
-                            .accessibilityIdentifier("add-luxio-guide")
-                    }.multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.vertical, 12)
-                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-
-                Section {
-                    TextField("192.168.1.42", text: $address)
-                        .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .focused($addressFocused).submitLabel(.go)
-                        .accessibilityLabel("IP address").accessibilityIdentifier("add-luxio-address")
-                        .onSubmit { if !host.isEmpty && !connecting { addressFocused = false; connecting = true } }
-                    Button {
-                        addressFocused = false; connecting = true
-                    } label: {
-                        HStack(spacing: 10) {
-                            if connecting { ProgressView() }
-                            Text(connecting ? "Connecting…" : "Connect")
-                            Spacer()
-                            if !connecting { Image(systemName: "arrow.right") }
-                        }.padding(.vertical, 4)
-                    }.disabled(host.isEmpty || connecting || addingVirtual).accessibilityIdentifier("add-luxio-connect")
-
-                } header: { Text("Connect by IP address") } footer: {
-                    Text("Already have a Luxio? Enter its IP address or hostname. Connect your iPhone to the same Wi-Fi network.")
-                }
-                Section {
-                    Button {
-                        addressFocused = false; addingVirtual = true
-                    } label: {
-                        Text("Add a virtual device").font(.footnote).underline().foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity).padding(.vertical, 4)
-                    }.buttonStyle(.plain).accessibilityIdentifier("add-luxio-virtual")
-                }.listRowBackground(Color.clear)
-            }
-            .navigationTitle("Add Luxio").navigationBarTitleDisplayMode(.inline)
-            .scrollDismissesKeyboard(.interactively)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cancel") { dismiss() }.disabled(connecting || addingVirtual)
-                }
-            }
-            .disabled(connecting || addingVirtual)
+        var instructions = AttributedString("To create your own Luxio, flash an ESP32 with the Luxio firmware and connect a compatible digital LED strip. Get started.")
+        if let range = instructions.range(of: "Get started") {
+            instructions[range].link = URL(string: "https://luxio.lighting/")!
+            instructions[range].underlineStyle = .single
         }
-        .modifier(ActionToast(failure: $failure))
+        var simulator = AttributedString("Want to experience the app first? Try the Simulator.")
+        if let range = simulator.range(of: "Try the Simulator") {
+            simulator[range].link = URL(string: "luxio://simulator")!
+            simulator[range].underlineStyle = .single
+        }
+        return VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(spacing: 12) {
+                        Image("LuxioLogo").resizable().scaledToFit()
+                            .frame(width: 64, height: 64).accessibilityHidden(true)
+                        Text("Add a Luxio").font(.title2.bold()).foregroundStyle(.white)
+                    }.frame(maxWidth: .infinity)
+                    Text(instructions)
+                        .tint(Color(red: 79 / 255, green: 1, blue: 127 / 255))
+                        .accessibilityIdentifier("add-luxio-guide")
+                    Text(simulator)
+                        .tint(Color(red: 79 / 255, green: 1, blue: 127 / 255))
+                        .environment(\.openURL, OpenURLAction { _ in
+                            addingVirtual = true
+                            return .handled
+                        })
+                        .accessibilityIdentifier("add-luxio-virtual")
+                }
+                .font(.subheadline).foregroundStyle(.white.opacity(0.8))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(24)
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button { dismiss() } label: {
+                    Text("Understood").font(.body.weight(.semibold))
+                        .foregroundStyle(Color.black)
+                        .frame(maxWidth: .infinity).padding(.vertical, 16)
+                        .background(LinearGradient(colors: [Color(red: 0, green: 210 / 255, blue: 1), Color(red: 79 / 255, green: 1, blue: 127 / 255)], startPoint: .bottomLeading, endPoint: .topTrailing), in: RoundedRectangle(cornerRadius: 12))
+                }.buttonStyle(.plain).accessibilityIdentifier("add-luxio-understood")
+                    .padding(.horizontal, 24).padding(.vertical, 16)
+            }
+            .disabled(addingVirtual)
+        }
+        .presentationDetents([.height(400), .large])
         .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled(connecting || addingVirtual)
-        .onChange(of: address) { _, _ in failure = nil }
-        .task(id: connecting) {
-            guard connecting else { return }
-            defer { connecting = false }
-            failure = nil
-            await discovery.add(Light(deviceId: host, name: "Luxio", lan_ip: host))
-            guard !Task.isCancelled else { return }
-            if let light = discovery.lights.first(where: { $0.lan_ip == host }) { onAdded(light) }
-            else { failure = ActionFailure(title: "Connect to \(host)", message: "Couldn't connect. Check the address and make sure Luxio is powered on and on the same Wi-Fi network.") }
-        }
+        .interactiveDismissDisabled(addingVirtual)
         .task(id: addingVirtual) {
             guard addingVirtual else { return }
             let light = await discovery.addSimulator()

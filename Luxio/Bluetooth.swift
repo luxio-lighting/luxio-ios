@@ -24,7 +24,7 @@ struct BluetoothFrame {
 
 @MainActor final class BluetoothDiscovery: NSObject, @preconcurrency CBCentralManagerDelegate {
     static let service = CBUUID(string: "e97b1000-3c27-4a20-9df4-7d025bc7e451")
-    var found: ((BluetoothConnection) -> Void)?
+    var found: ((BluetoothConnection, String) -> Void)?
     var status: ((String?) -> Void)?
     private var central: CBCentralManager?
     private var connections: [UUID: BluetoothConnection] = [:]
@@ -33,7 +33,7 @@ struct BluetoothFrame {
         scanning = true
         for connection in connections.values { connection.enabled = true }
         if central == nil { central = CBCentralManager(delegate: self, queue: .main) }
-        else if let central, central.state == .poweredOn { central.stopScan(); central.scanForPeripherals(withServices: [Self.service]) }
+        else if let central, central.state == .poweredOn { central.stopScan(); central.scanForPeripherals(withServices: [Self.service], options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]) }
     }
     func stop() {
         scanning = false; central?.stopScan()
@@ -43,7 +43,7 @@ struct BluetoothFrame {
         switch central.state {
         case .poweredOn:
             status?(nil)
-            if scanning { central.scanForPeripherals(withServices: [Self.service]) }
+            if scanning { central.scanForPeripherals(withServices: [Self.service], options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]) }
         case .unauthorized: status?("Allow Bluetooth access in Settings to find nearby Luxio devices.")
         case .poweredOff: status?("Turn on Bluetooth to find nearby Luxio devices.")
         case .unsupported: status?("Bluetooth is unavailable on this device.")
@@ -57,7 +57,8 @@ struct BluetoothFrame {
         guard scanning else { return }
         let connection = connections[peripheral.identifier] ?? BluetoothConnection(peripheral: peripheral, central: central)
         connections[peripheral.identifier] = connection
-        found?(connection)
+        let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? peripheral.name ?? "Luxio"
+        found?(connection, name)
     }
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         peripheral.discoverServices([Self.service])
@@ -133,13 +134,16 @@ struct BluetoothFrame {
         peripheral.writeValue(bytes, for: rx, type: .withResponse)
     }
     func fail(_ error: Error) {
+        let failure: Error = (error as? CBError)?.code == .peerRemovedPairingInformation
+            ? LuxioError.message("This Luxio doesn't remember your phone. Remove the device from your phone's Bluetooth connections first and try again.")
+            : error
         timeoutTask?.cancel(); timeoutTask = nil
         ready = false; rx = nil; tx = nil
         let pending = queue; queue.removeAll()
         let current = active; active = nil
         if peripheral.state == .connected || peripheral.state == .connecting { central.cancelPeripheralConnection(peripheral) }
-        current?.continuation.resume(throwing: error)
-        for item in pending { item.continuation.resume(throwing: error) }
+        current?.continuation.resume(throwing: failure)
+        for item in pending { item.continuation.resume(throwing: failure) }
     }
     func disconnected(_ error: Error) {
         // Requests arriving while cancellation was in progress can now reconnect.

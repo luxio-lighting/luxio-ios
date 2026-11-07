@@ -8,35 +8,45 @@ final class SavedLibraryTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
         app.buttons["add-luxio"].tap()
-        XCTAssertTrue(app.staticTexts["Create your own Luxio"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.links["add-luxio-guide"].isHittable)
-        XCTAssertFalse(app.buttons["add-luxio-connect"].isEnabled)
-        XCTAssertTrue(app.buttons["add-luxio-virtual"].isHittable)
+        XCTAssertTrue(app.staticTexts["Add a Luxio"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["add-luxio-guide"].label.hasSuffix("Get started."))
+        XCTAssertEqual(app.staticTexts["add-luxio-virtual"].label, "Want to experience the app first? Try the Simulator.")
+        XCTAssertFalse(app.textFields["add-luxio-address"].exists)
+        XCTAssertFalse(app.buttons["add-luxio-connect"].exists)
+        XCTAssertTrue(app.staticTexts["add-luxio-virtual"].isHittable)
         let sheet = XCTAttachment(screenshot: app.screenshot()); sheet.name = "Add Luxio sheet"; sheet.lifetime = .keepAlways; add(sheet)
-        app.buttons["Cancel"].tap()
+        app.buttons["add-luxio-understood"].tap()
+        XCTAssertFalse(app.staticTexts["add-luxio-guide"].exists)
         XCTAssertTrue(app.buttons["add-luxio"].waitForExistence(timeout: 5)); app.buttons["add-luxio"].tap()
-        app.buttons["add-luxio-virtual"].tap()
+        app.links["Try the Simulator"].tap()
         XCTAssertTrue(app.staticTexts["device-title"].waitForExistence(timeout: 8))
         XCTAssertEqual(app.staticTexts["device-title"].label, "Luxio Simulator")
         XCTAssertFalse(app.textFields["add-luxio-address"].exists)
+        app.terminate()
+        app.launchArguments = ["-luxio.simulator.enabled", "YES"]
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["Luxio Simulator"].exists)
     }
 
-    func testAddLuxioByAddressAndRetry() throws {
+    func testBluetoothConnectsOnlyWhenTapped() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
-        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/unreachable"
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/settings"
+        app.launchEnvironment["LUXIO_UI_TEST_BLUETOOTH_NAME"] = "Nearby Luxio"
         app.launch()
-        XCTAssertTrue(app.buttons["add-luxio"].waitForExistence(timeout: 10)); app.buttons["add-luxio"].tap()
-        let address = app.textFields["add-luxio-address"]
-        XCTAssertTrue(address.waitForExistence(timeout: 5)); address.tap(); address.typeText("127.0.0.1:1")
-        app.buttons["add-luxio-connect"].tap()
-        XCTAssertTrue(app.staticTexts["Couldn't connect. Check the address and make sure Luxio is powered on and on the same Wi-Fi network."].waitForExistence(timeout: 10))
-        XCTAssertEqual(address.value as? String, "127.0.0.1:1")
-        address.tap(); address.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 11) + "127.0.0.1:8082")
-        app.buttons["add-luxio-connect"].tap()
+        let nearby = app.buttons["connect-bluetooth-ble://ui-fixture"]
+        XCTAssertTrue(nearby.waitForExistence(timeout: 10))
+        XCTAssertEqual(nearby.value as? String, "Nearby via Bluetooth. Tap to connect.")
+        XCTAssertFalse(app.switches["Nearby Luxio power"].exists)
+        XCTAssertFalse(app.staticTexts["device-title"].exists)
+        let advertisement = XCTAttachment(screenshot: app.screenshot()); advertisement.name = "Nearby Bluetooth device"; advertisement.lifetime = .keepAlways; add(advertisement)
+        nearby.tap()
         XCTAssertTrue(app.staticTexts["device-title"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["device-title"].label, "Library test")
-        XCTAssertFalse(address.exists)
+        app.buttons["Back"].tap()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 5))
+        XCTAssertFalse(nearby.exists)
+        XCTAssertTrue(app.switches["Library test power"].exists)
     }
 
     func testDeviceHeaderNameRemainsVisible() throws {
@@ -276,21 +286,32 @@ final class SavedLibraryTests: XCTestCase {
 
     func testHomeSkeletonsAndEmptyState() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-lastDiscoveredLightCount", "3"]
-        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/unreachable"
-        app.launch()
-        XCTAssertTrue(app.otherElements["light-skeleton-0"].waitForExistence(timeout: 3))
-        let skeletons = XCTAttachment(screenshot: app.screenshot())
-        skeletons.name = "Remembered device skeletons"; skeletons.lifetime = .keepAlways; add(skeletons)
-        XCTAssertEqual(app.otherElements.matching(NSPredicate(format: "identifier BEGINSWITH 'light-skeleton-'")).count, 3)
-        XCTAssertTrue(app.staticTexts["No Luxio Devices Found"].waitForExistence(timeout: 12))
-        XCTAssertFalse(app.buttons["Library test"].exists)
-        XCTAssertFalse(app.otherElements["light-skeleton-0"].exists)
-        XCTAssertTrue(app.buttons["Add Luxio"].exists)
-        XCTAssertTrue(app.buttons["add-luxio"].exists)
-        XCTAssertFalse(app.staticTexts["Pull down to search again."].exists)
-        let empty = XCTAttachment(screenshot: app.screenshot())
-        empty.name = "No reachable lights"; empty.lifetime = .keepAlways; add(empty)
+        for previousCount in [0, 5] {
+            app.launchArguments = ["-lastDiscoveredLightCount", "\(previousCount)"]
+            app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/unreachable"
+            app.launch()
+            XCTAssertEqual(app.otherElements.matching(NSPredicate(format: "identifier BEGINSWITH 'light-skeleton-'")).count, previousCount > 0 ? previousCount : 3)
+            let skeletons = XCTAttachment(screenshot: app.screenshot())
+            skeletons.name = "Device skeletons (previous count \(previousCount))"; skeletons.lifetime = .keepAlways; add(skeletons)
+            XCTAssertFalse(app.staticTexts["Finding Luxio Devices"].exists)
+            XCTAssertTrue(app.staticTexts["No Luxio Devices Found"].waitForExistence(timeout: 12))
+            XCTAssertFalse(app.buttons["Library test"].exists)
+            XCTAssertFalse(app.otherElements["light-skeleton-0"].exists)
+            XCTAssertTrue(app.buttons["Add a Luxio"].exists)
+            XCTAssertFalse(app.buttons["add-luxio"].exists)
+            let card = app.otherElements["empty-lights"]
+            let addButton = app.buttons["Add a Luxio"]
+            let simulator = app.buttons["Try the Simulator"]
+            XCTAssertEqual(addButton.frame.width, card.frame.width - 40, accuracy: 1)
+            XCTAssertGreaterThanOrEqual(simulator.frame.minY, card.frame.maxY)
+            XCTAssertEqual((card.frame.minY + simulator.frame.maxY) / 2, app.otherElements["lights-list"].frame.midY, accuracy: 12)
+            let empty = XCTAttachment(screenshot: app.screenshot())
+            empty.name = "No reachable lights"; empty.lifetime = .keepAlways; add(empty)
+            addButton.tap()
+            XCTAssertTrue(app.staticTexts["Add a Luxio"].waitForExistence(timeout: 5))
+            app.buttons["add-luxio-understood"].tap()
+            app.terminate()
+        }
     }
 
     func testCachedDeviceOpensWithoutWaiting() throws {

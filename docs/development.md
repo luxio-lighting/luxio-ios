@@ -9,11 +9,11 @@ xcodebuild -project Luxio.xcodeproj -scheme Luxio -sdk iphoneos -configuration D
   DEVELOPMENT_TEAM=YOUR_TEAM -allowProvisioningUpdates build
 ```
 
-The home-screen plus button opens Add Luxio, with a link to the build guide at https://luxio.lighting/, manual IP/hostname connection with inline errors, and a subtle virtual-device link. Successful connections and virtual devices open directly in the controls.
+The home-screen plus button opens Add Luxio, with subtle build instructions, an underlined link to https://luxio.lighting/, and a Luxio Simulator link. A Luxio-gradient Understood button dismisses the sheet. The simulator opens directly in the controls; nearby hardware appears through automatic discovery.
 
 Firmware updates are in each light's settings. An available update opens a sheet with an Install button, matching Wi-Fi setup. The same sheet shows download progress, waits for the device to reconnect on the expected build before confirming success, and offers recovery when installation fails. Checking does not install; there are no automatic installs.
 
-Discovery starts with local mDNS (`_luxio._tcp`). If startup mDNS finds no reachable Luxio, discovery falls back to the cloud device list. Manually pulling down the home list also queries the cloud; background polling stays local. Candidates must answer a local state request before appearing; background local checks remove unreachable devices and bring them back when they recover. Opening a card uses its cached address and state immediately. Startup placeholders use the last discovered device count, and both pull-to-refresh controls remain active for at least 500 ms.
+Discovery starts with local mDNS (`_luxio._tcp`). If startup mDNS finds no reachable Luxio, discovery falls back to the cloud device list. Manually pulling down the home list also queries the cloud; background polling stays local. Candidates must answer a local state request before appearing; background local checks remove unreachable devices and bring them back when they recover. Opening a card uses its cached address and state immediately. Startup placeholders use the last discovered device count, or three when there is no previous count, and both pull-to-refresh controls remain active for at least 500 ms.
 
 ## Local verification
 
@@ -69,17 +69,24 @@ Animation presets include preview palettes and live parameters. `Slider` and `Ch
 The empty home screen offers **Try the Simulator**, which opens a 60-LED RGBCCT
 Luxio Simulator. It supports the normal color/white editor, gradients, animations,
 parameters, power, brightness and saved libraries. Its local device API uses no
-HTTP; state and saved items persist on the phone. Animated headers and tiles use
+HTTP; the simulator and its state and saved items exist only for the current app session. Killing and reopening the app removes the simulator. Animated headers and tiles use
 the same native Lua preview runtime. Settings allow renaming, changing LED count,
 and removing the simulator; hardware-only firmware and Matter controls are hidden.
-`npm run test:simulator` checks these local controls, library persistence and that
+`npm run test:simulator` checks these local controls, session-only state and that
 no network requests are sent.
 
 ## Bluetooth and Wi-Fi setup (firmware build 24)
 
 The iOS app discovers the Luxio GATT service alongside Bonjour. Allow Bluetooth
-access when prompted and keep Luxio nearby. A successful state request supplies
-the fingerprint, so Wi-Fi and Bluetooth discoveries share one light and client.
+access when prompted and keep Luxio nearby. Advertised names appear as Bluetooth
+cards without connecting or requesting state. Tap a card to connect and let iOS
+request pairing when needed; power and brightness appear after connection.
+Discovery, foreground polling and pull-to-refresh do not connect to unselected
+Bluetooth devices. Unconnected advertisements expire after 20 seconds without
+being seen. A successful user-initiated state request supplies the fingerprint,
+so Wi-Fi and Bluetooth discoveries merge into one light and client. Before that
+identity is available, they may appear separately. Nearby unconnected Bluetooth
+cards do not suppress the startup cloud fallback.
 Colors, power, brightness, saved resources, animation uploads and Matter pairing
 codes use the same Protobuf operations over either transport. Requests over BLE
 are queued, framed and fragmented at the negotiated write size; timeouts,

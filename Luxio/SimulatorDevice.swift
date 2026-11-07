@@ -7,16 +7,10 @@ final class SimulatorDevice {
     private var libraries: [Int: [Data]] = [0: [], 1: [], 2: []]
     private var animation: Data?
 
-    init(saved: Data? = nil) {
+    init() {
         state.deviceId = "luxio-simulator"; state.name = "Luxio Simulator"
         state.build = 21; state.lanIP = "simulator"; state.mode = 0; state.on = true
         state.channels = [0, 210, 255, 0, 0, 0]
-        if let saved, let fields = try? Proto.decode(saved), let restored = try? LightState(fields.message(3)),
-           restored.deviceId == state.deviceId, Self.supportedStripTypes.contains(restored.strip), (1...1024).contains(restored.count) {
-            state = restored
-            libraries = [0: fields[18] ?? [], 1: fields[15] ?? [], 2: fields[4] ?? []]
-            animation = fields[5]?.first
-        }
         state.supportedStripTypes = Self.supportedStripTypes
     }
 

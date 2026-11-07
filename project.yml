@@ -12,6 +12,7 @@ settings:
     INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
     TARGETED_DEVICE_FAMILY: '1,2'
     CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: FY9967QY8V
 targets:
   Luxio:
     type: application
@@ -19,11 +20,11 @@ targets:
     sources: [Luxio]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: lighting.luxio.app
+        PRODUCT_BUNDLE_IDENTIFIER: lighting.luxio
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_OBJC_BRIDGING_HEADER: Luxio/Luxio-Bridging-Header.h
-        MARKETING_VERSION: '0.1.55'
-        CURRENT_PROJECT_VERSION: '56'
+        MARKETING_VERSION: '1.1.0'
+        CURRENT_PROJECT_VERSION: '59'
   LuxioUITests:
     type: bundle.ui-testing
     platform: iOS

@@ -201,7 +201,7 @@ struct ActionFailure: Identifiable {
     #endif
     init(address: String) {
         self.address = address; isSimulator = address == "simulator"
-        simulator = isSimulator ? SimulatorDevice(saved: UserDefaults.standard.data(forKey: "luxio.simulator.snapshot")) : nil
+        simulator = isSimulator ? SimulatorDevice() : nil
         if let simulator { state = simulator.state; lastBrightness = simulator.state.brightness }
     }
     func request(_ operation: Int, payload: Proto = Proto(), timeout: TimeInterval = 10) async throws -> [Int: [Data]] {
@@ -219,9 +219,6 @@ struct ActionFailure: Identifiable {
         #endif
         if let simulator {
             let response = try simulator.request(operation, payload: payload)
-            if ![0, 5, 6, 18, 19, 25, 26].contains(operation) {
-                UserDefaults.standard.set(simulator.snapshot.bytes, forKey: "luxio.simulator.snapshot")
-            }
             state = simulator.state; lastBrightness = simulator.state.brightness
             if [0, 10, 31].contains(operation) { animationError = response.text(22).isEmpty ? nil : response.text(22) }
             return response

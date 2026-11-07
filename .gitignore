@@ -10,3 +10,8 @@ DerivedData*
 .env
 *.log
 local.properties
+
+# App Store credentials and Python caches
+*.p8
+*.p12
+__pycache__/

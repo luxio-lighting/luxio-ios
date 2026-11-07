@@ -1,0 +1,11 @@
+Control your Luxio LED devices from one simple app. Choose a solid color, create a gradient, or bring your strip to life with an animation.
+
+• Adjust power and brightness for each device.
+• Pick colors and supported warm, cool or dedicated white channels.
+• Create gradients with multiple color points.
+• Play animations and customize their available parameters.
+• Save colors, gradients and animations to your device.
+• Find nearby devices, configure Wi-Fi and access Matter pairing details on supported hardware.
+• Try the built-in Simulator without owning a Luxio device.
+
+Physical lighting control requires compatible Luxio hardware. Available controls depend on the device, LED strip and firmware. Devices must be reachable locally over Wi-Fi or supported Bluetooth connections.

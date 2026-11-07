@@ -1,0 +1,6 @@
+A simpler way to add and discover your Luxio lights.
+
+• A refreshed Add a Luxio sheet with build instructions and quick access to the Simulator.
+• Nearby Bluetooth devices appear before pairing. Tap a device to connect, with clearer guidance if its pairing information has changed.
+• A cleaner empty state and animated loading previews.
+• The Simulator now starts fresh for each app session.

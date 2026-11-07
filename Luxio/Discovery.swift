@@ -14,9 +14,11 @@ import Combine
     private var services: [NetService] = []
     private var started = false
     @Published var bluetoothStatus: String?
+    private var bluetoothChecks = Set<String>()
+    private var bluetoothIdentities: [String: String] = [:]
+    private var bluetoothLastSeen: [String: Date] = [:]
 #if os(iOS)
     private let bluetooth = BluetoothDiscovery()
-    private var bluetoothChecks = Set<String>()
     func setBluetoothActive(_ active: Bool) {
 #if DEBUG
         if ProcessInfo.processInfo.environment["LUXIO_UI_TEST_ADDRESS"] != nil { return }
@@ -30,41 +32,33 @@ import Combine
         guard !started else { return }; started = true
         defer {
             loading = false
-            if !Task.isCancelled { UserDefaults.standard.set(lights.count, forKey: "lastDiscoveredLightCount") }
+            if !Task.isCancelled { UserDefaults.standard.set(lights.filter { $0.id != "luxio-simulator" }.count, forKey: "lastDiscoveredLightCount") }
         }
-        if UserDefaults.standard.bool(forKey: "luxio.simulator.enabled") { _ = await addSimulator() }
+        UserDefaults.standard.removeObject(forKey: "luxio.simulator.enabled")
+        UserDefaults.standard.removeObject(forKey: "luxio.simulator.snapshot")
 #if DEBUG
         if let address = ProcessInfo.processInfo.environment["LUXIO_UI_TEST_ADDRESS"] {
-            await add(Light(deviceId: "ui-fixture", name: "Library test", lan_ip: address))
+            if let name = ProcessInfo.processInfo.environment["LUXIO_UI_TEST_BLUETOOTH_NAME"] {
+                foundBluetooth(address: "ble://ui-fixture", name: name) { bytes, timeout in
+                    var request = URLRequest(url: URL(string: "http://\(address)/api")!)
+                    request.httpMethod = "POST"; request.httpBody = bytes; request.timeoutInterval = timeout
+                    request.setValue("application/x-protobuf", forHTTPHeaderField: "Content-Type")
+                    let (data, response) = try await URLSession.shared.data(for: request)
+                    guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw LuxioError.message("Couldn't connect to Luxio over Bluetooth. Tap the device to try again.") }
+                    return data
+                }
+            } else {
+                await add(Light(deviceId: "ui-fixture", name: "Library test", lan_ip: address))
+            }
             return
         }
 #endif
 #if os(iOS)
         bluetooth.status = { [weak self] in self?.bluetoothStatus = $0 }
-        bluetooth.found = { [weak self] connection in
-            guard let self, self.bluetoothChecks.insert(connection.address).inserted else { return }
-            Task {
-                defer { self.bluetoothChecks.remove(connection.address) }
-                let client = LightClient(address: connection.address)
-                client.bluetoothRequest = { [weak connection] bytes, timeout in
-                    guard let connection else { throw LuxioError.message("Luxio is no longer nearby") }
-                    return try await connection.request(bytes, timeout: timeout)
-                }
-                do {
-                    _ = try await client.request(0)
-                    guard let state = client.state, !state.deviceId.isEmpty else { return }
-                    let id = state.deviceId
-                    self.bluetoothStatus = nil
-                    if let existing = self.clients[id] {
-                        existing.bluetoothRequest = client.bluetoothRequest
-                        if !self.lights.contains(where: { $0.id == id }), let candidate = self.candidates[id] { _ = await self.check(candidate) }
-                    } else {
-                        let light = Light(deviceId: id, name: state.name, lan_ip: connection.address)
-                        self.candidates[id] = light; self.clients[id] = client; self.lights.append(light)
-                    }
-                } catch {
-                    if !Task.isCancelled && !(error is CancellationError) { self.bluetoothStatus = error.localizedDescription }
-                }
+        bluetooth.found = { [weak self] connection, name in
+            self?.foundBluetooth(address: connection.address, name: name) { [weak connection] bytes, timeout in
+                guard let connection else { throw LuxioError.message("Luxio is no longer nearby") }
+                return try await connection.request(bytes, timeout: timeout)
             }
         }
         bluetooth.start()
@@ -73,21 +67,75 @@ import Combine
         // Give Bonjour a short discovery window before showing the empty state.
         try? await Task.sleep(for: .seconds(2))
         await refresh()
-        if lights.allSatisfy({ $0.id == "luxio-simulator" }) && !Task.isCancelled { await refresh(includeCloud: true) }
+        if !lights.contains(where: { $0.id != "luxio-simulator" && clients[$0.id]?.state != nil }) && !Task.isCancelled { await refresh(includeCloud: true) }
+    }
+
+    func foundBluetooth(address: String, name: String, seenAt: Date = .now, request: @escaping (Data, TimeInterval) async throws -> Data) {
+        if let id = bluetoothIdentities[address], let client = clients[id] {
+            client.bluetoothRequest = request
+            return
+        }
+        bluetoothLastSeen[address] = seenAt
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let light = Light(deviceId: address, name: name.isEmpty ? "Luxio" : name, lan_ip: address)
+        let client = clients[address] ?? LightClient(address: address)
+        client.bluetoothRequest = request
+        clients[address] = client
+        if let index = lights.firstIndex(where: { $0.id == address }) {
+            if lights[index].name != light.name { lights[index] = light }
+        } else { lights.append(light) }
+        // Advertisements never enter candidates: periodic refresh must not initiate pairing.
+    }
+
+    func connectBluetooth(_ light: Light) async throws -> Light {
+        guard let client = clients[light.id], client.state == nil, light.lan_ip.hasPrefix("ble://"),
+              bluetoothChecks.insert(light.id).inserted else { throw LuxioError.message("Luxio is already connecting or is no longer nearby.") }
+        defer { bluetoothChecks.remove(light.id) }
+        do {
+            let response = try await client.request(0, timeout: 60)
+            try Task.checkCancellation()
+            guard response[3] != nil, let state = client.state, !state.deviceId.isEmpty, state.deviceId != light.id else { throw LuxioError.message("Luxio returned an invalid device identity.") }
+            let id = state.deviceId
+            // Merge by the verified device identity, never by the advertised name.
+            let verified: Light
+            if let existing = clients[id], let candidate = candidates[id] {
+                existing.bluetoothRequest = client.bluetoothRequest
+                if let current = lights.first(where: { $0.id == id }) {
+                    verified = current
+                } else {
+                    client.address = candidate.lan_ip
+                    clients[id] = client
+                    verified = Light(deviceId: id, name: state.name, lan_ip: candidate.lan_ip)
+                    lights.append(verified)
+                }
+            } else {
+                verified = Light(deviceId: id, name: state.name, lan_ip: light.lan_ip)
+                clients[id] = client; candidates[id] = verified
+                if let index = lights.firstIndex(where: { $0.id == id }) { lights[index] = verified }
+                else { lights.append(verified) }
+            }
+            bluetoothIdentities[light.lan_ip] = id
+            bluetoothLastSeen.removeValue(forKey: light.lan_ip)
+            lights.removeAll { $0.id == light.id }
+            clients.removeValue(forKey: light.id)
+            bluetoothStatus = nil
+            return verified
+        } catch {
+            client.state = nil
+            throw error
+        }
     }
 
     func addSimulator() async -> Light {
-        UserDefaults.standard.set(true, forKey: "luxio.simulator.enabled")
         let light = Light(deviceId: "luxio-simulator", name: "Luxio Simulator", lan_ip: "simulator")
         await add(light)
         return lights.first(where: { $0.id == light.id }) ?? light
     }
 
     func removeSimulator() {
-        UserDefaults.standard.set(false, forKey: "luxio.simulator.enabled")
         candidates.removeValue(forKey: "luxio-simulator"); clients.removeValue(forKey: "luxio-simulator")
         lights.removeAll { $0.id == "luxio-simulator" }
-        UserDefaults.standard.set(lights.count, forKey: "lastDiscoveredLightCount")
+        UserDefaults.standard.set(lights.filter { $0.id != "luxio-simulator" }.count, forKey: "lastDiscoveredLightCount")
     }
 
     func add(_ light: Light) async {
@@ -125,6 +173,11 @@ import Combine
 
     func refresh(includeCloud: Bool = false) async {
         let minimum = ContinuousClock.now.advanced(by: .milliseconds(500))
+        for (address, seenAt) in bluetoothLastSeen where Date().timeIntervalSince(seenAt) > 20 && !bluetoothChecks.contains(address) {
+            lights.removeAll { $0.id == address }
+            clients.removeValue(forKey: address)
+            bluetoothLastSeen.removeValue(forKey: address)
+        }
         if includeCloud {
 #if os(iOS)
             setBluetoothActive(true)
@@ -156,7 +209,7 @@ import Combine
                 group.addTask { _ = await self.check(light) }
             }
         }
-        if !Task.isCancelled && !loading { UserDefaults.standard.set(lights.count, forKey: "lastDiscoveredLightCount") }
+        if !Task.isCancelled && !loading { UserDefaults.standard.set(lights.filter { $0.id != "luxio-simulator" }.count, forKey: "lastDiscoveredLightCount") }
         if includeCloud {
             try? await Task.sleep(until: minimum, clock: .continuous)
             searching = false

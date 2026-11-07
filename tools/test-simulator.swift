@@ -15,6 +15,7 @@ final class NoNetworkProtocol: URLProtocol {
         let enabled = UserDefaults.standard.object(forKey: "luxio.simulator.enabled")
         let count = UserDefaults.standard.object(forKey: "lastDiscoveredLightCount")
         UserDefaults.standard.removeObject(forKey: "luxio.simulator.snapshot")
+        UserDefaults.standard.removeObject(forKey: "luxio.simulator.enabled")
         defer {
             UserDefaults.standard.set(previous, forKey: "luxio.simulator.snapshot")
             UserDefaults.standard.set(enabled, forKey: "luxio.simulator.enabled")
@@ -58,9 +59,7 @@ final class NoNetworkProtocol: URLProtocol {
             _ = try await client.request(mode == 0 ? 30 : mode == 1 ? 23 : 10, payload: run)
             precondition(client.state!.on && client.state!.mode == mode && client.state!.brightness == 16)
             if mode == 1 { precondition(client.state!.gradient!.text(4) == "points-metadata") }
-            let fresh = LightClient(address: "simulator")
-            precondition(fresh.state!.mode == mode, "Current output must survive relaunch")
-            let list = try await fresh.request(mode == 0 ? 25 : mode == 1 ? 18 : 5)
+            let list = try await client.request(mode == 0 ? 25 : mode == 1 ? 18 : 5)
             precondition(list[mode == 0 ? 18 : mode == 1 ? 15 : 4]?.count == 1)
             var renamed = Proto(); renamed.string(1, id); renamed.string(2, "Renamed \(mode)")
             for field in mode == 2 ? [3] : mode == 1 ? [3,4] : [3] { for data in item[field] ?? [] { renamed.data(field, data) } }
@@ -83,8 +82,6 @@ final class NoNetworkProtocol: URLProtocol {
                 var patch = Proto(); patch.data(17, parameter.proto.bytes)
                 _ = try await client.request(32, payload: patch)
                 precondition(client.state!.parameters.first!.value == parameter.minimum && client.state!.animationRevision == revision)
-                let fresh = LightClient(address: "simulator")
-                precondition(fresh.state!.parameters.first!.value == parameter.minimum)
             }
         }
         for mode in 0...2 {
@@ -97,8 +94,7 @@ final class NoNetworkProtocol: URLProtocol {
             var config = Proto(); config.string(1, "Strip test"); config.string(2, strip); config.uint(3, 1024)
             var settings = Proto(); settings.data(5, config.bytes)
             _ = try await client.request(3, payload: settings)
-            let fresh = LightClient(address: "simulator")
-            precondition(fresh.state!.strip == strip && fresh.state!.count == 1024)
+            precondition(client.state!.strip == strip && client.state!.count == 1024)
             var color = Proto(); color.uint(strip == "WS2805" ? 5 : strip == "WS2812" ? 1 : 4, 255)
             var request = Proto(); request.data(3, color.bytes)
             _ = try await client.request(1, payload: request)
@@ -110,10 +106,18 @@ final class NoNetworkProtocol: URLProtocol {
                 catch { precondition(error.localizedDescription.contains("Channel unavailable")) }
             }
         }
+        precondition(UserDefaults.standard.data(forKey: "luxio.simulator.snapshot") == nil, "Simulator state must stay in memory")
+        precondition(UserDefaults.standard.bool(forKey: "luxio.simulator.enabled") == false, "Simulator must not be enabled for future launches")
+        let fresh = LightClient(address: "simulator")
+        precondition(fresh.state!.count == 60 && fresh.state!.name == "Luxio Simulator", "A new simulator must start from defaults")
+        for operation in [5, 18, 25] {
+            let list = try await fresh.request(operation)
+            precondition(list[operation == 5 ? 4 : operation == 18 ? 15 : 18] == nil, "A new simulator must have an empty library")
+        }
         await discovery.refresh()
         precondition(discovery.lights.count == 1)
         discovery.removeSimulator(); precondition(discovery.lights.isEmpty)
         precondition(NoNetworkProtocol.calls == 0, "Simulated controls must never use HTTP")
-        print("PASS: offline RGBCCT controls, separate brightness/power, all animation presets and parameters, saved libraries, persistence, and removal")
+        print("PASS: offline RGBCCT controls, separate brightness/power, all animation presets and parameters, saved libraries, session-only state, and removal")
     }
 }

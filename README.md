@@ -27,7 +27,7 @@ Control your Luxio LED strips from your phone. Pick the perfect color, create a 
 ## Get started
 
 1. Power on a controller running [Luxio firmware](https://github.com/luxio-lighting/luxio-firmware).
-2. Open the app and allow Bluetooth and Local Network access when prompted. Nearby devices appear automatically; you can also add one by its network address.
+2. Open the app and allow Bluetooth and Local Network access when prompted. Nearby devices appear automatically. Tap a Bluetooth device to connect and pair.
 3. Open a device and choose **Color**, **Gradient**, or **Animation**.
 
 No hardware yet? Choose **Try the Simulator** from the empty home screen to explore colors, gradients, animations, and saved favorites.

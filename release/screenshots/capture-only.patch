@@ -1,0 +1,38 @@
+diff --git a/Luxio/Discovery.swift b/Luxio/Discovery.swift
+index 99ccad4..cf52968 100644
+--- a/Luxio/Discovery.swift
++++ b/Luxio/Discovery.swift
+@@ -49,6 +49,11 @@ import Combine
+                 }
+             } else {
+                 await add(Light(deviceId: "ui-fixture", name: "Library test", lan_ip: address))
++                if ProcessInfo.processInfo.environment["LUXIO_MARKETING_DEVICES"] == "1" {
++                    for i in 1...4 {
++                        await add(Light(deviceId: "marketing-\(i)", name: "Luxio", lan_ip: "127.0.0.1:8093/\(i)"))
++                    }
++                }
+             }
+             return
+         }
+diff --git a/Luxio/LuxioApp.swift b/Luxio/LuxioApp.swift
+index aa63557..0f35cdf 100644
+--- a/Luxio/LuxioApp.swift
++++ b/Luxio/LuxioApp.swift
+@@ -376,7 +376,7 @@ struct LightCard: View {
+                     HStack(spacing: 12) {
+                         if !client.isSimulator {
+                             Group {
+-                                if client.usingBluetooth {
++                                if client.usingBluetooth || (ProcessInfo.processInfo.environment["LUXIO_MARKETING_BLUETOOTH_NAME"] == client.state?.name && client.state?.name != nil) {
+                                     Image("Bluetooth").resizable().scaledToFit().frame(width: 12, height: 20)
+                                 } else { Image(systemName: "wifi").font(.system(size: 17, weight: .medium)) }
+                             }.frame(width: 22).opacity(0.8).accessibilityHidden(true)
+@@ -1180,7 +1180,7 @@ struct SettingsView: View {
+                     Section("Connection") {
+                         LabeledContent("Type") {
+                             HStack(spacing: 6) {
+-                                if client.usingBluetooth {
++                                if client.usingBluetooth || (ProcessInfo.processInfo.environment["LUXIO_MARKETING_BLUETOOTH_NAME"] == client.state?.name && client.state?.name != nil) {
+                                     Image("Bluetooth").resizable().scaledToFit().frame(width: 12, height: 20)
+                                 } else {
+                                     Image(systemName: "wifi")

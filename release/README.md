@@ -2,6 +2,7 @@
 
 Bundle ID: `lighting.luxio`. Version: `1.2.1`. Build: `65`.
 App Store Connect app: `6828093615`, owned by Emile B.V. (team `FY9967QY8V`).
+Submitted on 25 November 2026; Apple reports **Waiting for Review**.
 The release is configured for automatic distribution after Apple approval.
 
 ## Build and export
@@ -31,7 +32,9 @@ python3 release/app-store-api.py GET '/v1/apps?filter[bundleId]=lighting.luxio'
 ## Submission
 
 `metadata.json`, `release-notes.txt` and `review-notes.txt` describe this release.
-The existing approved screenshots are retained. `PrivacyInfo.xcprivacy` and the
+The approved iPhone screenshots are retained. Five new landscape iPad screenshots
+show the sidebar layout with the same demonstration devices. Raw captures and
+captioned PNGs are in `screenshots/ipad-13/`. `PrivacyInfo.xcprivacy` and the
 app's encryption declaration are included in the archive. The app requires no
 account, purchase or hardware to explore its Simulator.
 

@@ -1,0 +1,46 @@
+{
+  "version": "1.2.1",
+  "locale": "en-US",
+  "orientation": "landscape",
+  "dimensions": [
+    2752,
+    2064
+  ],
+  "screenshots": 5,
+  "placementGroup": "IPAD_13_PROFILE",
+  "status": "Uploaded, processed and ordered; old iPad placements replaced",
+  "iphoneScreenshotsUnchanged": true,
+  "verifiedAt": "2026-11-25T21:06:42.700846+00:00",
+  "assets": {
+    "ipad-13-01-control.png": {
+      "imageId": "24800019-6fc7-80af-8001-9b4630c22c2b",
+      "sha256": "b389f894061a8e28a49ee80ad344e684cf96c0b22a1d90b3039487487ef35d60",
+      "group": "IPAD_13_PROFILE",
+      "placementId": "94800019-6fc7-80af-8f07-ae8acd0cffb6"
+    },
+    "ipad-13-02-colors.png": {
+      "imageId": "bb000019-6fc7-80af-802b-c0e0c3eb5160",
+      "sha256": "12ffa66f037b4a79d9ab8ef1b6d9978ddf48ab64699900d1e0968660345d679e",
+      "group": "IPAD_13_PROFILE",
+      "placementId": "ad000019-6fc7-80af-8f38-909cfcd96354"
+    },
+    "ipad-13-03-animations.png": {
+      "imageId": "54400019-6fc7-80af-8017-e6eee6dd0819",
+      "sha256": "18d911d8a1784ceb3fb47a9d6fa5edb007da941b59202f8801b5dc51133106a8",
+      "group": "IPAD_13_PROFILE",
+      "placementId": "8dc00019-6fc7-80af-8f04-c8ec65221a6e"
+    },
+    "ipad-13-04-settings.png": {
+      "imageId": "a3000019-6fc7-80af-8036-296aeae979b5",
+      "sha256": "e800d48b92c5206c66c29172901b565881f0ae21369f5906e0a8d712242cf569",
+      "group": "IPAD_13_PROFILE",
+      "placementId": "da800019-6fc7-80af-8f26-3be70b4e72b1"
+    },
+    "ipad-13-05-matter.png": {
+      "imageId": "8ac00019-6fc7-80af-8023-45345ce1d121",
+      "sha256": "3317f4b6defa5cf948a8f15a2e03aa48128846e36e5a0eac052ec15a6abbdeb7",
+      "group": "IPAD_13_PROFILE",
+      "placementId": "b6000019-6fc7-80af-8f03-eb27f936da3e"
+    }
+  }
+}

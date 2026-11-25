@@ -11,14 +11,17 @@
     "macCompatibility": "Built and run on Apple silicon; discovery, sidebar, simulator color/white/gradient/animation, Settings and Command-R verified",
     "archive": "passed",
     "codesignVerification": "passed",
-    "privacyManifestIncluded": true
+    "privacyManifestIncluded": true,
+    "ipadMarketingCapture": "Five landscape views captured successfully; all ten raw/final PNGs are 2752 \u00d7 2064"
   },
-  "binaryUploaded": false,
-  "reviewSubmitted": false,
-  "submissionStatus": "PREPARED",
+  "binaryUploaded": true,
+  "reviewSubmitted": true,
+  "submissionStatus": "WAITING_FOR_REVIEW",
   "appleSiliconMac": {
     "available": true,
     "compatibilityVerified": true,
     "minimumOS": "macOS 14.0"
-  }
+  },
+  "deliveryId": "0aae877d-7e91-42f1-b068-252df2f89a4c",
+  "checkedAt": "2026-11-25T21:07:15.775896+00:00"
 }

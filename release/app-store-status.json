@@ -1,13 +1,13 @@
 {
   "appId": "6828093615",
   "sku": "luxio-ios",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "appStoreState": "WAITING_FOR_REVIEW",
   "releaseType": "AFTER_APPROVAL",
   "metadataUploaded": true,
   "screenshots": {
     "iphone": "Five approved marketing screenshots each for 6.3-inch and 6.9-inch",
-    "ipad": "Existing three tablet screenshots retained"
+    "ipad": "Five landscape 2752 \u00d7 2064 marketing screenshots showing the new device sidebar; raw captures and captioned PNGs saved in release/screenshots/ipad-13"
   },
   "binaryUploaded": true,
   "reviewSubmitted": true,
@@ -15,7 +15,7 @@
   "appStoreExport": "succeeded",
   "submissionStatus": "WAITING_FOR_REVIEW",
   "buildAttached": true,
-  "build": "61",
+  "build": "65",
   "pricing": "Free",
   "availableTerritories": 175,
   "reviewContactComplete": true,
@@ -23,9 +23,14 @@
   "contentRightsComplete": true,
   "blockers": [],
   "privacyPublished": true,
-  "versionId": "d4c52cd6-35cb-4732-83fa-e832878d95ac",
-  "buildId": "caf95291-64c0-416a-8ddb-9ad2285795f3",
-  "reviewSubmissionId": "53defebf-ca8c-47fa-a2b3-e0ea7ba87df0",
+  "versionId": "b5037477-3ec9-44f9-b1ae-0614f160478a",
+  "buildId": "0aae877d-7e91-42f1-b068-252df2f89a4c",
+  "reviewSubmissionId": "19833f6f-4aaf-40fe-ae0e-40d1e447525e",
   "binaryProcessingState": "VALID",
-  "checkedAt": "2026-11-25T10:23:11.247893+00:00"
+  "checkedAt": "2026-11-25T21:07:15.775896+00:00",
+  "appleSiliconMac": {
+    "available": true,
+    "compatibilityVerified": true,
+    "minimumOS": "macOS 14.0"
+  }
 }

@@ -137,6 +137,8 @@ struct LightState {
     var wifiEnabled = true, matterEnabled = true
     var relayEnabled = false, relayInverted = false
     var relayGPIO = 0
+    var supportsButton = false, buttonEnabled = false
+    var buttonGPIO = 18, buttonPress = 0
     var channels = [Int](repeating: 0, count: 6)
     var previewChannels: [[Int]] {
         if mode == 1, let gradient {
@@ -163,6 +165,11 @@ struct LightState {
         matterEnabled = try config[8] == nil || config.message(8).number(1) != 0
         let relay = try config.message(6)
         relayEnabled = relay.number(1) != 0; relayGPIO = relay.number(2); relayInverted = relay.number(3) != 0
+        supportsButton = config[9] != nil
+        if supportsButton {
+            let button = try config.message(9)
+            buttonEnabled = button.number(1) != 0; buttonGPIO = button.number(2); buttonPress = button.number(3)
+        }
         on = build >= 11 ? fields.number(9) != 0 : fields.number(4) > 0
         brightness = min(256, max(1, fields.number(4)))
         if build < 11 { brightness = fields.number(4) > 0 ? Int((Double(fields.number(4)) * 256 / 255).rounded()) : 16 }

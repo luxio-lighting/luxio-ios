@@ -1,8 +1,8 @@
 {
   "bundleId": "lighting.luxio",
-  "version": "1.1.0",
-  "build": "59",
-  "archive": ".sdk/releases/Luxio-1.1.0.xcarchive",
+  "version": "1.2.0",
+  "build": "61",
+  "archive": ".sdk/releases/Luxio-1.2.0-61.xcarchive",
   "validation": {
     "typecheck": "passed",
     "relevantUiTests": "passed",
@@ -13,10 +13,12 @@
   },
   "appStoreExport": "succeeded",
   "submissionStatus": "WAITING_FOR_REVIEW",
-  "ipa": ".sdk/releases/app-store-1.1.0/Luxio.ipa",
+  "ipa": ".sdk/releases/app-store-1.2.0-61/Luxio.ipa",
   "binaryUploaded": true,
   "buildAttached": true,
   "binaryProcessingState": "VALID",
-  "deliveryId": "197fcdf0-87d7-41db-bfcb-e12b605e991f",
-  "ipaSHA256": "07fe9d893bb0777ffdb37133ca69517d18364956353f12e1d1b1cbc8b4b0b3e8"
+  "deliveryId": "caf95291-64c0-416a-8ddb-9ad2285795f3",
+  "ipaSHA256": "d62707e788da82f59df80a93bc6bce1d98b46a53da8a76bd7390cb030e8a4dbd",
+  "reviewSubmitted": true,
+  "reviewSubmissionId": "53defebf-ca8c-47fa-a2b3-e0ea7ba87df0"
 }

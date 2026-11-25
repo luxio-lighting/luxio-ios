@@ -47,6 +47,11 @@ const settingsDevice = new Device('settings-fixture'); settingsDevice.state.conf
 fixtures.set('/settings/api', settingsDevice);
 const relayDevice = new Device('relay-fixture'); relayDevice.state.config.name = 'Library test'; relayDevice.state.build = 27; relayDevice.state.config.gpio = 16;
 fixtures.set('/relay/api', relayDevice);
+const buttonDevice = new Device('button-fixture'); buttonDevice.state.config.name = 'Library test'; buttonDevice.state.build = 47;
+buttonDevice.state.config.gpio = 16; buttonDevice.state.config.relay = { enabled: true, gpio: 17, inverted: false };
+buttonDevice.state.config.button = { enabled: false, gpio: 18, press: 0 };
+fixtures.set('/button/api', buttonDevice);
+
 const saveDevice = new Device('save-tiles-fixture'); saveDevice.state.config.name = 'Library test';
 fixtures.set('/save-tiles/api', saveDevice);
 const whiteDevice = new Device('white-drag-fixture'); whiteDevice.state.config.name = 'Library test';

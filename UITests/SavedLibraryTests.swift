@@ -115,6 +115,52 @@ final class SavedLibraryTests: XCTestCase {
         XCTAssertFalse(app.buttons["Show Pairing Code"].exists)
     }
 
+    func testButtonSettings() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-luxio.simulator.enabled", "NO"]
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8083/button"
+        app.launch()
+        XCTAssertTrue(app.buttons["Library test"].waitForExistence(timeout: 15)); app.buttons["Library test"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5)); app.buttons["Luxio settings"].tap()
+        let enabled = app.switches["settings-button-enabled"]
+        for _ in 0..<4 { if enabled.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(enabled.waitForExistence(timeout: 5)); XCTAssertEqual(enabled.value as? String, "0")
+        XCTAssertFalse(app.textFields["settings-button-gpio"].exists)
+        enabled.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        let pin = app.textFields["settings-button-gpio"]
+        for _ in 0..<3 { if pin.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(pin.waitForExistence(timeout: 5)); XCTAssertEqual(pin.value as? String, "18")
+        let action = app.buttons["settings-button-press"]
+        for _ in 0..<3 { if action.isHittable { break }; app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(action.waitForExistence(timeout: 5)); action.tap()
+        app.buttons["Cycle Saved Presets"].tap()
+        let hold = app.buttons["settings-button-long-press"]
+        XCTAssertTrue(hold.exists); XCTAssertFalse(hold.isEnabled)
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Button settings"; screenshot.lifetime = .keepAlways; add(screenshot)
+        for _ in 0..<3 { if pin.isHittable { break }; app.swipeDown(velocity: .slow) }
+        let save = app.navigationBars["Settings"].buttons["Save"].firstMatch
+        for value in ["16", "17", "62", "18"] {
+            pin.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+            pin.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (pin.value as? String ?? "").count) + value)
+            XCTAssertEqual(save.isEnabled, value == "18")
+        }
+        save.tap(); XCTAssertTrue(save.waitForNonExistence(timeout: 10))
+        app.buttons["Luxio settings"].tap()
+        for _ in 0..<4 { if enabled.isHittable { break }; app.swipeUp() }
+        XCTAssertEqual(enabled.value as? String, "1")
+        XCTAssertEqual(pin.value as? String, "18")
+        for _ in 0..<3 { if action.exists { break }; app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(action.label.contains("Cycle Saved Presets"))
+        for _ in 0..<3 { if pin.isHittable { break }; app.swipeDown(velocity: .slow) }
+        pin.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        pin.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (pin.value as? String ?? "").count) + "-1")
+        XCTAssertFalse(save.isEnabled)
+        for _ in 0..<3 { if enabled.isHittable { break }; app.swipeDown(velocity: .slow) }
+        enabled.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        XCTAssertTrue(save.isEnabled)
+        XCTAssertFalse(pin.exists); save.tap(); XCTAssertTrue(save.waitForNonExistence(timeout: 10))
+    }
+
     func testRelaySettings() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-luxio.simulator.enabled", "NO"]

@@ -1,6 +1,7 @@
-A simpler way to add and discover your Luxio lights.
+Configure a physical button on your Luxio.
 
-• A refreshed Add a Luxio sheet with build instructions and quick access to the Simulator.
-• Nearby Bluetooth devices appear before pairing. Tap a device to connect, with clearer guidance if its pairing information has changed.
-• A cleaner empty state and animated loading previews.
-• The Simulator now starts fresh for each app session.
+• Enable Button and choose its GPIO in Settings.
+• Use a short press to toggle power or cycle saved presets.
+• Hold the button to turn off.
+
+Requires compatible Luxio firmware with Button support (build 47 or newer).

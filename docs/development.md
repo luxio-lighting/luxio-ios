@@ -134,3 +134,24 @@ Firmware build 34 adds Enable Wi-Fi and Enable Matter as the first switches in t
 ## Store release
 
 Approved store screenshots and their editable sources are in the [release directory](../release/).
+
+
+## Physical button settings (1.2.0)
+
+The native Button section follows Relay for physical devices. Presence of
+`Config.button` (field 9) advertises support; older firmware shows a disabled
+toggle and an update hint. Additional fields are hidden while disabled. GPIO18
+is the default; enabled buttons require a pin in 0–61 distinct from LED data
+and an enabled relay. Short press is Toggle On/Off or Cycle Saved Presets; the
+disabled Long Press picker always shows Turn Off. Settings persist through the
+existing configuration request, with no physical button action sent by the app.
+
+Protocol tests cover absence, GPIO0, enable/disable and both actions. The native
+UI test covers hide/show, invalid/conflicting pins, action selection, fixed long
+press, saving, reopening and safe disabling after invalid pasted input.
+
+Version 1.2.0 (build 61) was uploaded, attached and submitted through Apple's
+APIs. Apple reports VALID processing and WAITING_FOR_REVIEW, with
+AFTER_APPROVAL release enabled. The existing 13 approved screenshot placements,
+review contact, pricing, distribution and privacy declarations are retained.
+See `release/app-store-status.json` for the verified receipt.

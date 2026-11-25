@@ -8,4 +8,4 @@ Animations use a bundled Lua interpreter restricted to lighting output. Scripts 
 
 The app uses local HTTP to talk to devices on a user's LAN; the public discovery and firmware API uses HTTPS.
 
-Version 1.1.0 updates the Add a Luxio sheet, empty state and loading skeletons. The Simulator is session-only and disappears when the app is terminated. Manual IP entry has been removed; hardware is discovered through Bonjour, the cloud directory and Bluetooth.
+Version 1.2.0 adds the Button settings group beneath Relay for compatible physical controllers. With firmware build 47 or newer, users can enable an active-low button, choose a GPIO and select Toggle On/Off or Cycle Saved Presets. Holding the button turns off; this action is fixed. Button is disabled by default and its hardware controls are unavailable in the Simulator. Older firmware shows a disabled toggle with an update message. No new permissions or data collection are introduced.

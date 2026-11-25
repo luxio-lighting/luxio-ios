@@ -38,6 +38,17 @@ import Foundation
         configBytes = Proto(); configBytes.data(6, relay.bytes); relayFields[3] = [configBytes.bytes]
         let gpioZero = try LightState(relayFields)
         precondition(gpioZero.relayEnabled && gpioZero.relayGPIO == 0 && !gpioZero.relayInverted)
+        precondition(!state.supportsButton && !state.buttonEnabled && state.buttonGPIO == 18 && state.buttonPress == 0)
+        for action in 0...1 {
+            var button = Proto(); button.uint(1, 1); button.uint(2, 0); button.uint(3, UInt64(action))
+            configBytes = Proto(); configBytes.data(9, button.bytes); relayFields[3] = [configBytes.bytes]
+            let withButton = try LightState(relayFields)
+            precondition(withButton.supportsButton && withButton.buttonEnabled && withButton.buttonGPIO == 0 && withButton.buttonPress == action)
+        }
+        var button = Proto(); button.uint(2, 18)
+        configBytes = Proto(); configBytes.data(9, button.bytes); relayFields[3] = [configBytes.bytes]
+        let buttonOff = try LightState(relayFields)
+        precondition(buttonOff.supportsButton && !buttonOff.buttonEnabled && buttonOff.buttonGPIO == 18)
         var power = Proto(); power.uint(2, 15); power.uint(10, 1)
         let decodedPower = try Proto.decode(power.bytes)
         precondition(decodedPower.number(10) == 1)

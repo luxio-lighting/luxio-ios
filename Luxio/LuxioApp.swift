@@ -1075,6 +1075,9 @@ struct SettingsView: View {
     @State private var relayEnabled = false
     @State private var relayGPIO = "0"
     @State private var relayInverted = false
+    @State private var buttonEnabled = false
+    @State private var buttonGPIO = "18"
+    @State private var buttonPress = 0
     @State private var pairing = ""
     @State private var qr = ""
     @State private var copiedPairing = false
@@ -1090,6 +1093,7 @@ struct SettingsView: View {
         let validCount = Int(count).map { (1...1024).contains($0) } ?? false
         let validGPIO = Int(gpio).map { (0...61).contains($0) } ?? false
         let validRelayGPIO = !relayEnabled || (Int(relayGPIO).map { (0...61).contains($0) && $0 != Int(gpio) } ?? false)
+        let validButtonGPIO = !buttonEnabled || (Int(buttonGPIO).map { (0...61).contains($0) && $0 != Int(gpio) && (!relayEnabled || $0 != Int(relayGPIO)) } ?? false)
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         NavigationStack {
             Form {
@@ -1155,6 +1159,28 @@ struct SettingsView: View {
                     Text("A relay switches power to your LED strip, reducing standby power when the light is off. Enable this if your controller uses a relay to power its LEDs.")
                     if !validRelayGPIO { Text("Relay GPIO must be between 0 and 61 and different from Data Pin.") }
                     if (client.state?.build ?? 0) < 27 { Text("Relay settings require firmware build 27 or newer.") }
+                }.listRowBackground(tileColor).disabled(saving || installing)
+                Section {
+                    Toggle("Enable Button", isOn: $buttonEnabled).accessibilityIdentifier("settings-button-enabled")
+                        .disabled(client.state?.supportsButton != true)
+                    if buttonEnabled {
+                        HStack {
+                            Text("Button GPIO")
+                            Spacer(minLength: 20)
+                            TextField("0–61", text: $buttonGPIO).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
+                                .focused($focusedField, equals: "buttonGPIO").accessibilityLabel("Button GPIO").accessibilityIdentifier("settings-button-gpio")
+                        }
+                        Picker("Button Press", selection: $buttonPress) {
+                            Text("Toggle On/Off").tag(0)
+                            Text("Cycle Saved Presets").tag(1)
+                        }.tint(.white).accessibilityIdentifier("settings-button-press")
+                        Picker("Button Long Press", selection: .constant(0)) {
+                            Text("Turn Off").tag(0)
+                        }.disabled(true).accessibilityIdentifier("settings-button-long-press")
+                    }
+                } header: { Text("Button") } footer: {
+                    if client.state?.supportsButton != true { Text("Update Luxio’s firmware to enable Button.") }
+                    if !validButtonGPIO { Text("Button GPIO must be between 0 and 61 and different from Data Pin and Relay GPIO.") }
                 }.listRowBackground(tileColor).disabled(saving || installing)
                 Section {
                     Toggle("Enable Wi-Fi", isOn: $wifiEnabled).accessibilityIdentifier("settings-wifi-enabled")
@@ -1258,7 +1284,7 @@ struct SettingsView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            guard let ledCount = Int(count), (1...1024).contains(ledCount), let pin = Int(gpio), (0...61).contains(pin), validRelayGPIO else { return }
+                            guard let ledCount = Int(count), (1...1024).contains(ledCount), let pin = Int(gpio), (0...61).contains(pin), validRelayGPIO, validButtonGPIO else { return }
                             focusedField = nil
                             if !wifiEnabled && client.state?.wifiEnabled == true && !client.usingBluetooth && !client.isSimulator {
                                 confirmDisableWifi = true
@@ -1270,7 +1296,7 @@ struct SettingsView: View {
                                 Text("Save")
                             }
                         }.accessibilityLabel(saving ? "Saving" : "Save")
-                            .tint(.white).disabled(saving || installing || client.state == nil || trimmedName.isEmpty || trimmedName.utf8.count > 63 || !validCount || !validGPIO || !validRelayGPIO)
+                            .tint(.white).disabled(saving || installing || client.state == nil || trimmedName.isEmpty || trimmedName.utf8.count > 63 || !validCount || !validGPIO || !validRelayGPIO || !validButtonGPIO)
                     }
                 }
                 .task(id: saving) {
@@ -1285,6 +1311,10 @@ struct SettingsView: View {
                         if !client.isSimulator && (client.state?.build ?? 0) >= 34 {
                             var wifi = Proto(); wifi.uint(1, wifiEnabled ? 1 : 0); config.data(7, wifi.bytes)
                             var matter = Proto(); matter.uint(1, matterEnabled ? 1 : 0); config.data(8, matter.bytes)
+                        }
+                        if !client.isSimulator && client.state?.supportsButton == true {
+                            var button = Proto(); button.uint(1, buttonEnabled ? 1 : 0); button.uint(2, UInt64((0...61).contains(Int(buttonGPIO) ?? -1) ? Int(buttonGPIO)! : 18)); button.uint(3, UInt64(buttonPress))
+                            config.data(9, button.bytes)
                         }
                         var payload = Proto(); payload.data(5, config.bytes)
                         _ = try await client.request(3, payload: payload); client.error = nil; dismiss()
@@ -1308,7 +1338,7 @@ struct SettingsView: View {
             FirmwareUpdateView(client: client, build: availableBuild, installing: $installing)
         }.task {
             await client.refresh()
-            if let state = client.state { name = state.name; strip = state.strip; count = String(state.count); gpio = String(state.gpio); relayEnabled = state.relayEnabled; relayGPIO = String(state.relayGPIO); relayInverted = state.relayInverted; wifiEnabled = state.wifiEnabled; matterEnabled = state.matterEnabled }
+            if let state = client.state { name = state.name; strip = state.strip; count = String(state.count); gpio = String(state.gpio); relayEnabled = state.relayEnabled; relayGPIO = String(state.relayGPIO); relayInverted = state.relayInverted; wifiEnabled = state.wifiEnabled; matterEnabled = state.matterEnabled; buttonEnabled = state.buttonEnabled; buttonGPIO = String(state.buttonGPIO); buttonPress = state.buttonPress }
         }
     }
 }

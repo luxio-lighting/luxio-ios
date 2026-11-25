@@ -24,15 +24,96 @@ extension LightState {
 
 struct LightsView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var discovery = Discovery()
     @State private var showAdd = false
     @State private var selectedLight: Light?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var compactColumn: NavigationSplitViewColumn = .sidebar
+    private let usesSidebar = UIDevice.current.userInterfaceIdiom == .pad
     @State private var connectingBluetooth: String?
     @State private var powerStates: [String: Bool] = [:]
     @State private var failure: ActionFailure?
     var body: some View {
-        NavigationStack {
+        Group {
+            if usesSidebar {
+                NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $compactColumn) {
+                    deviceList
+                        .navigationSplitViewColumnWidth(min: 300, ideal: 340, max: 400)
+                } detail: {
+                    NavigationStack {
+                        if let light = selectedLight, let client = discovery.clients[light.id] {
+                            ControlView(light: light, client: client, inSidebar: true) {
+                                discovery.removeSimulator(); selectedLight = nil; compactColumn = .sidebar
+                            }
+                            .id(light.id + light.lan_ip)
+                        } else {
+                            ContentUnavailableView {
+                                Label("Select a Luxio", systemImage: "lightbulb")
+                            } description: {
+                                Text("Choose a device in the sidebar to control its colors, gradients and animations.")
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(backdrop.ignoresSafeArea())
+                            .navigationTitle("Luxio")
+                        }
+                    }
+                }
+                .navigationSplitViewStyle(.balanced)
+            } else {
+                NavigationStack {
+                    deviceList
+                    .navigationDestination(isPresented: Binding(get: { selectedLight != nil }, set: { if !$0 { selectedLight = nil } })) {
+                        if let light = selectedLight, let client = discovery.clients[light.id] {
+                            ControlView(light: light, client: client) {
+                                discovery.removeSimulator(); selectedLight = nil
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .onChange(of: selectedLight?.id) { _, id in
+            if usesSidebar, id != nil { compactColumn = .detail }
+        }
+        .onChange(of: discovery.lights.map { $0.id + $0.lan_ip }) { _, _ in
+            guard usesSidebar else { return }
+            if let selectedLight {
+                self.selectedLight = discovery.lights.first { $0.id == selectedLight.id }
+            }
+            if selectedLight == nil, horizontalSizeClass == .regular {
+                selectedLight = discovery.lights.first { discovery.clients[$0.id]?.state != nil }
+            }
+        }
+        .task {
+            await discovery.start()
+            while !Task.isCancelled {
+                if scenePhase == .active { await discovery.refresh() }
+                do { try await Task.sleep(for: .seconds(4)) } catch { break }
+            }
+        }
+        .task(id: connectingBluetooth) {
+            guard let id = connectingBluetooth else { return }
+            defer { connectingBluetooth = nil }
+            guard let light = discovery.lights.first(where: { $0.id == id }) else { return }
+            do { selectedLight = try await discovery.connectBluetooth(light) }
+            catch {
+                if !Task.isCancelled && !(error is CancellationError) {
+                    failure = ActionFailure(title: "Connect to \(light.name)", message: error.localizedDescription)
+                }
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in discovery.setBluetoothActive(phase == .active) }
+        .sensoryFeedback(.impact(weight: .light), trigger: showAdd) { _, presented in presented }
+        .sheet(isPresented: $showAdd) {
+            AddLuxioView(discovery: discovery) { light in
+                showAdd = false; selectedLight = light
+            }
+        }
+    }
+
+    private var deviceList: some View {
             GeometryReader { geometry in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
@@ -74,8 +155,16 @@ struct LightsView: View {
                                             .accessibilityLabel(light.name).accessibilityValue(connectingBluetooth == light.id ? "Connecting via Bluetooth" : "Nearby via Bluetooth. Tap to connect.")
                                             .accessibilityIdentifier("connect-bluetooth-" + light.id)
                                     } else if let client = discovery.clients[light.id] {
-                                        LightCard(light: light, client: client, discovery: discovery, on: powerStates[light.id] ?? client.state?.on ?? false) { selectedLight = light }.id(light.id + light.lan_ip)
-                                            .onReceive(client.$failure.compactMap { $0 }) { if $0.createdAt.timeIntervalSinceNow > -6 { failure = $0 } }
+                                        LightCard(light: light, client: client, discovery: discovery, on: powerStates[light.id] ?? client.state?.on ?? false) {
+                                            selectedLight = light; compactColumn = .detail
+                                        }.id(light.id + light.lan_ip)
+                                            .overlay {
+                                                if usesSidebar && selectedLight?.id == light.id {
+                                                    RoundedRectangle(cornerRadius: 15).strokeBorder(.white.opacity(0.85), lineWidth: 2).allowsHitTesting(false)
+                                                }
+                                            }
+                                            .accessibilityAddTraits(usesSidebar && selectedLight?.id == light.id ? .isSelected : [])
+                                            .onReceive(client.$failure.compactMap { $0 }) { if $0.createdAt.timeIntervalSinceNow > -6 && selectedLight?.id != light.id { failure = $0 } }
                                             .onReceive(client.$state.map { $0?.on ?? false }.removeDuplicates()) { on in
                                                 guard powerStates[light.id] != on else { return }
                                                 withAnimation(.smooth(duration: 0.35)) { powerStates[light.id] = on }
@@ -122,13 +211,6 @@ struct LightsView: View {
                     }
             }
                     .modifier(ActionToast(failure: $failure))
-                    .navigationDestination(isPresented: Binding(get: { selectedLight != nil }, set: { if !$0 { selectedLight = nil } })) {
-                        if let light = selectedLight, let client = discovery.clients[light.id] {
-                            ControlView(light: light, client: client) {
-                                discovery.removeSimulator(); selectedLight = nil
-                            }
-                        }
-                    }
                     .navigationTitle("Luxio")
                     .toolbarTitleDisplayMode(.inlineLarge)
                     .toolbar(.visible, for: .navigationBar)
@@ -141,33 +223,8 @@ struct LightsView: View {
                         }
                     }
                     .background(backdrop.ignoresSafeArea())
-        }
-        .task {
-            await discovery.start()
-            while !Task.isCancelled {
-                if scenePhase == .active { await discovery.refresh() }
-                do { try await Task.sleep(for: .seconds(4)) } catch { break }
-            }
-        }
-        .task(id: connectingBluetooth) {
-            guard let id = connectingBluetooth else { return }
-            defer { connectingBluetooth = nil }
-            guard let light = discovery.lights.first(where: { $0.id == id }) else { return }
-            do { selectedLight = try await discovery.connectBluetooth(light) }
-            catch {
-                if !Task.isCancelled && !(error is CancellationError) {
-                    failure = ActionFailure(title: "Connect to \(light.name)", message: error.localizedDescription)
-                }
-            }
-        }
-        .onChange(of: scenePhase) { _, phase in discovery.setBluetoothActive(phase == .active) }
-        .sensoryFeedback(.impact(weight: .light), trigger: showAdd) { _, presented in presented }
-        .sheet(isPresented: $showAdd) {
-            AddLuxioView(discovery: discovery) { light in
-                showAdd = false; selectedLight = light
-            }
-        }
     }
+
 }
 
 struct AddLuxioView: View {
@@ -346,6 +403,8 @@ struct LightCard: View {
 }
 
 struct ControlView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let inSidebar: Bool
     @Environment(\.dismiss) private var dismiss
     let light: Light
     @ObservedObject var client: LightClient
@@ -357,8 +416,8 @@ struct ControlView: View {
     @State private var modeResolved = false
     @State private var editingColor = false
     @StateObject private var colorEditor: ColorEditor
-    init(light: Light, client: LightClient, removeSimulator: (() -> Void)? = nil) {
-        self.light = light; self.client = client; self.removeSimulator = removeSimulator
+    init(light: Light, client: LightClient, inSidebar: Bool = false, removeSimulator: (() -> Void)? = nil) {
+        self.light = light; self.client = client; self.inSidebar = inSidebar; self.removeSimulator = removeSimulator
         _level = State(initialValue: Double(client.state?.brightness ?? 16))
         let reported = client.state?.mode ?? 0
         _mode = State(initialValue: reported == 1 && client.state?.supportsGradients == true ? .gradient : reported == 2 ? .animation : .color)
@@ -393,6 +452,7 @@ struct ControlView: View {
                 SceneLibrary(client: client, editor: colorEditor, mode: mode).allowsHitTesting(!editingColor)
 
             }.padding(.top, 28).padding(.bottom, 28)
+                .frame(maxWidth: inSidebar ? 900 : .infinity).frame(maxWidth: .infinity)
         }.refreshable {
             let minimum = ContinuousClock.now.advanced(by: .milliseconds(500))
             client.libraryRevision += 1; await client.refresh(userInitiated: true)
@@ -427,14 +487,15 @@ struct ControlView: View {
         .background(backdrop.ignoresSafeArea())
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .background(InteractiveBackGesture().frame(width: 0, height: 0))
+        .navigationBarBackButtonHidden(!inSidebar)
+        .background { if !inSidebar { InteractiveBackGesture().frame(width: 0, height: 0) } }
         .toolbar(.visible, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(on && client.state?.usesDarkForeground == true ? .light : .dark, for: .navigationBar)
         .tint(ink)
         .toolbar {
             if #available(iOS 26.0, *) {
+                if !inSidebar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold))
@@ -443,9 +504,10 @@ struct ControlView: View {
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("Back")
                 }.sharedBackgroundVisibility(.hidden)
+                }
                 ToolbarItem(placement: .topBarLeading) {
                     Text(client.state?.name ?? light.name).font(.headline).lineLimit(1)
-                        .frame(maxWidth: 160, alignment: .leading).fixedSize(horizontal: true, vertical: false)
+                        .frame(maxWidth: inSidebar && horizontalSizeClass == .regular ? 320 : 160, alignment: .leading).fixedSize(horizontal: true, vertical: false)
                         .foregroundStyle(ink)
                         .accessibilityIdentifier("device-title")
                 }.sharedBackgroundVisibility(.hidden)
@@ -458,6 +520,7 @@ struct ControlView: View {
                     }.buttonStyle(.plain).accessibilityLabel("Luxio settings")
                 }.sharedBackgroundVisibility(.hidden)
             } else {
+                if !inSidebar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold))
@@ -466,9 +529,10 @@ struct ControlView: View {
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("Back")
                 }
+                }
                 ToolbarItem(placement: .topBarLeading) {
                     Text(client.state?.name ?? light.name).font(.headline).lineLimit(1)
-                        .frame(maxWidth: 160, alignment: .leading).fixedSize(horizontal: true, vertical: false)
+                        .frame(maxWidth: inSidebar && horizontalSizeClass == .regular ? 320 : 160, alignment: .leading).fixedSize(horizontal: true, vertical: false)
                         .foregroundStyle(ink)
                         .accessibilityIdentifier("device-title")
                 }

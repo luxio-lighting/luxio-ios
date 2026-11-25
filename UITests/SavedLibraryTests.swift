@@ -1,6 +1,47 @@
 import XCTest
 
 final class SavedLibraryTests: XCTestCase {
+    func testIPadSidebarSelection() throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { throw XCTSkip("iPad split-view test") }
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = XCUIApplication()
+        app.launchEnvironment["LUXIO_UI_TEST_ADDRESS"] = "127.0.0.1:8082/settings"
+        app.launch()
+        let device = app.buttons["Library test"]
+        XCTAssertTrue(device.waitForExistence(timeout: 15))
+        let title = app.staticTexts["device-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertEqual(title.label, "Library test")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertGreaterThan(app.frame.width, app.frame.height)
+        XCTAssertTrue(device.isHittable)
+        XCTAssertGreaterThan(title.frame.minX, device.frame.maxX)
+        app.buttons["add-luxio"].tap()
+        XCTAssertTrue(app.links["Try the Simulator"].waitForExistence(timeout: 5))
+        app.links["Try the Simulator"].tap()
+        XCTAssertTrue(app.buttons["Luxio Simulator"].waitForExistence(timeout: 8))
+        XCTAssertTrue(NSPredicate(format: "label == %@", "Luxio Simulator").evaluate(with: title))
+        app.segmentedControls.buttons["Gradient"].tap()
+        XCTAssertTrue(app.buttons["Add point"].waitForExistence(timeout: 5))
+        device.tap()
+        XCTAssertEqual(title.label, "Library test")
+        XCTAssertTrue(app.segmentedControls.buttons["Color"].isSelected)
+        XCTAssertTrue(app.buttons["Luxio Simulator"].isHittable)
+        XCTAssertLessThan(app.buttons["Luxio settings"].frame.maxX, app.frame.maxX)
+        let landscape = XCTAttachment(screenshot: app.screenshot()); landscape.name = "iPad landscape sidebar"; landscape.lifetime = .keepAlways; add(landscape)
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(device.waitForExistence(timeout: 5))
+        XCTAssertTrue(device.isHittable)
+        XCTAssertTrue(title.isHittable)
+        XCTAssertGreaterThan(title.frame.minX, device.frame.maxX)
+        app.buttons["Luxio settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        app.navigationBars["Settings"].buttons["Save"].tap()
+        XCTAssertTrue(app.buttons["Luxio settings"].waitForExistence(timeout: 5))
+        let portrait = XCTAttachment(screenshot: app.screenshot()); portrait.name = "iPad portrait sidebar"; portrait.lifetime = .keepAlways; add(portrait)
+    }
+
     func testAddLuxioSheetAndVirtualDevice() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-luxio.simulator.enabled", "NO"]

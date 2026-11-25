@@ -1,7 +1,6 @@
-Configure a physical button on your Luxio.
+Luxio now makes more room for your devices on iPad.
 
-• Enable Button and choose its GPIO in Settings.
-• Use a short press to toggle power or cycle saved presets.
-• Hold the button to turn off.
-
-Requires compatible Luxio firmware with Button support (build 47 or newer).
+• Browse your devices in a sidebar while controlling the selected Luxio alongside it.
+• Switch between devices without returning to the home screen.
+• Use the layout in portrait or landscape.
+• The color and white-temperature switch is now centered below the wheel in Color and Gradient.

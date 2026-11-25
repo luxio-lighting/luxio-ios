@@ -76,6 +76,7 @@ struct ColorControls: View {
                 ColorWheel(editor: editor).frame(maxWidth: 420).padding(.horizontal, 22).disabled(editor.loading || editor.loadFailed || client.state == nil)
                 if client.state?.supportsWhite == true || client.state?.supportsWhiteTemperature == true {
                     HStack {
+                        Spacer()
                         HStack(spacing: 6) {
                             Button {
                                 editor.points[selected].originalChannels = nil; editor.points[selected].white = false; editor.apply()

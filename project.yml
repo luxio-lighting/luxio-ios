@@ -21,10 +21,11 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: lighting.luxio
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_OBJC_BRIDGING_HEADER: Luxio/Luxio-Bridging-Header.h
         MARKETING_VERSION: '1.2.1'
-        CURRENT_PROJECT_VERSION: '64'
+        CURRENT_PROJECT_VERSION: '65'
   LuxioUITests:
     type: bundle.ui-testing
     platform: iOS

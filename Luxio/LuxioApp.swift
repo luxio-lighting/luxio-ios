@@ -31,7 +31,7 @@ struct LightsView: View {
     @State private var selectedLight: Light?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var compactColumn: NavigationSplitViewColumn = .sidebar
-    private let usesSidebar = UIDevice.current.userInterfaceIdiom == .pad
+    private let usesSidebar = UIDevice.current.userInterfaceIdiom == .pad || ProcessInfo.processInfo.isiOSAppOnMac
     @State private var connectingBluetooth: String?
     @State private var powerStates: [String: Bool] = [:]
     @State private var failure: ActionFailure?
@@ -215,6 +215,21 @@ struct LightsView: View {
                     .toolbarTitleDisplayMode(.inlineLarge)
                     .toolbar(.visible, for: .navigationBar)
                     .toolbar {
+                        if ProcessInfo.processInfo.isiOSAppOnMac {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button {
+                                    Task {
+                                        await discovery.refresh(includeCloud: true)
+                                        if !Task.isCancelled, let error = discovery.error {
+                                            failure = ActionFailure(title: "Find Luxio devices", message: error)
+                                        }
+                                    }
+                                } label: { Image(systemName: "arrow.clockwise") }
+                                    .tint(.white).disabled(discovery.searching || discovery.loading)
+                                    .keyboardShortcut("r", modifiers: .command)
+                                    .help("Refresh Devices (⌘R)").accessibilityLabel("Refresh Devices")
+                            }
+                        }
                         if !discovery.lights.isEmpty {
                             ToolbarItem(placement: .topBarTrailing) {
                                 Button { showAdd = true } label: { Image(systemName: "plus") }.tint(.white)
@@ -1338,7 +1353,7 @@ struct SettingsView: View {
                 }
                 } else {
                     Section("Simulator") {
-                        Text("A virtual Luxio device running on this iPhone.").font(.footnote).foregroundStyle(.secondary)
+                        Text("A virtual Luxio device running on this \(ProcessInfo.processInfo.isiOSAppOnMac ? "Mac" : UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone").").font(.footnote).foregroundStyle(.secondary)
                         Button("Remove Simulator", role: .destructive) { dismiss(); removeSimulator?() }
                     }.listRowBackground(tileColor)
                 }

@@ -1,24 +1,24 @@
 {
   "bundleId": "lighting.luxio",
-  "version": "1.2.0",
-  "build": "61",
-  "archive": ".sdk/releases/Luxio-1.2.0-61.xcarchive",
+  "version": "1.2.1",
+  "build": "65",
+  "archive": ".sdk/releases/Luxio-1.2.1-65.xcarchive",
+  "ipa": ".sdk/releases/app-store-1.2.1-65/Luxio.ipa",
+  "ipaSHA256": "18e9b4fd229c66f641ffde85380bf63f3d594884147f9b59751624513fc9ad75",
+  "appStoreExport": "succeeded",
   "validation": {
-    "typecheck": "passed",
-    "relevantUiTests": "passed",
+    "relevantUiTests": "iPad sidebar/rotation and three iPhone navigation tests passed",
+    "macCompatibility": "Built and run on Apple silicon; discovery, sidebar, simulator color/white/gradient/animation, Settings and Command-R verified",
     "archive": "passed",
     "codesignVerification": "passed",
-    "unitTests": "passed",
     "privacyManifestIncluded": true
   },
-  "appStoreExport": "succeeded",
-  "submissionStatus": "WAITING_FOR_REVIEW",
-  "ipa": ".sdk/releases/app-store-1.2.0-61/Luxio.ipa",
-  "binaryUploaded": true,
-  "buildAttached": true,
-  "binaryProcessingState": "VALID",
-  "deliveryId": "caf95291-64c0-416a-8ddb-9ad2285795f3",
-  "ipaSHA256": "d62707e788da82f59df80a93bc6bce1d98b46a53da8a76bd7390cb030e8a4dbd",
-  "reviewSubmitted": true,
-  "reviewSubmissionId": "53defebf-ca8c-47fa-a2b3-e0ea7ba87df0"
+  "binaryUploaded": false,
+  "reviewSubmitted": false,
+  "submissionStatus": "PREPARED",
+  "appleSiliconMac": {
+    "available": true,
+    "compatibilityVerified": true,
+    "minimumOS": "macOS 14.0"
+  }
 }

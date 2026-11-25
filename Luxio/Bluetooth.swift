@@ -1,5 +1,8 @@
 import Foundation
 import CoreBluetooth
+#if os(iOS)
+import UIKit
+#endif
 
 // LXP1 + a big-endian payload length. Notifications may split anywhere,
 // including inside the header. Keep this independent of CoreBluetooth for tests.
@@ -134,8 +137,13 @@ struct BluetoothFrame {
         peripheral.writeValue(bytes, for: rx, type: .withResponse)
     }
     func fail(_ error: Error) {
+#if os(iOS)
+        let device = ProcessInfo.processInfo.isiOSAppOnMac ? "Mac" : UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+#else
+        let device = "Mac"
+#endif
         let failure: Error = (error as? CBError)?.code == .peerRemovedPairingInformation
-            ? LuxioError.message("This Luxio doesn't remember your phone. Remove the device from your phone's Bluetooth connections first and try again.")
+            ? LuxioError.message("This Luxio doesn't remember your \(device). Remove Luxio from your \(device)'s Bluetooth settings, then try again.")
             : error
         timeoutTask?.cancel(); timeoutTask = nil
         ready = false; rx = nil; tx = nil

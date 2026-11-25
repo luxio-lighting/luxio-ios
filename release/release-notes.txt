@@ -1,6 +1,7 @@
-Luxio now makes more room for your devices on iPad.
+Luxio now makes more room for your devices on iPad and Macs with Apple silicon.
 
 • Browse your devices in a sidebar while controlling the selected Luxio alongside it.
 • Switch between devices without returning to the home screen.
 • Use the layout in portrait or landscape.
 • The color and white-temperature switch is now centered below the wheel in Color and Gradient.
+• On Mac, use the refresh button or Command-R to search for devices.

@@ -1,6 +1,7 @@
 Control your Luxio LED devices from one simple app. Choose a solid color, create a gradient, or bring your strip to life with an animation.
 
 • Adjust power and brightness for each device.
+• Keep devices in a sidebar alongside their controls on iPad and Macs with Apple silicon.
 • Pick colors and supported warm, cool or dedicated white channels.
 • Create gradients with multiple color points.
 • Play animations and customize their available parameters.
